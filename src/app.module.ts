@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { ProfilesModule } from './profiles/profiles.module';
+import { QuizzesModule } from './quizzes/quizzes.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProfilesModule } from './profiles/profiles.module';
     AuthModule,
     HealthModule,
     ProfilesModule,
+    QuizzesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
