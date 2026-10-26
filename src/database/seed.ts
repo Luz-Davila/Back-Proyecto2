@@ -1,5 +1,8 @@
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
+import { DEFAULT_BUCKET } from '../storage/bucket-config';
+import { ensureBucket } from '../storage/ensure-bucket';
+import { serviceHeaders } from '../storage/service-headers';
 import { buildDatabaseOptions } from './database.options';
 import { createGradientPng } from './demo-image';
 
@@ -23,7 +26,7 @@ async function main(): Promise<void> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const email = process.env.TEST_USER_EMAIL;
   const password = process.env.TEST_USER_PASSWORD;
-  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'question-images';
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || DEFAULT_BUCKET;
 
   if (!databaseUrl || !supabaseUrl || !serviceKey || !email || !password) {
     throw new Error(
@@ -68,8 +71,7 @@ async function ensureAuthUser(
   password: string,
 ): Promise<AuthUser> {
   const headers = {
-    apikey: serviceKey,
-    Authorization: `Bearer ${serviceKey}`,
+    ...serviceHeaders(serviceKey),
     'Content-Type': 'application/json',
   };
 
@@ -150,8 +152,17 @@ async function ensureImage(
   bucket: string,
   quizId: string,
 ): Promise<void> {
+  const withImage = await dataSource.query(
+    'SELECT count(*)::int AS total FROM questions WHERE "quizId" = $1 AND "imageKey" IS NOT NULL',
+    [quizId],
+  );
+
+  if (withImage[0].total > 0) {
+    return;
+  }
+
   const pending = await dataSource.query(
-    `SELECT id FROM questions WHERE "quizId" = $1 AND "imageKey" IS NULL ORDER BY position LIMIT 1`,
+    'SELECT id FROM questions WHERE "quizId" = $1 ORDER BY position LIMIT 1',
     [quizId],
   );
 
@@ -163,10 +174,14 @@ async function ensureImage(
   const key = `quizzes/${quizId}/questions/${questionId}.png`;
   const png = createGradientPng(640, 360);
 
+  if (await ensureBucket(supabaseUrl, serviceKey, bucket)) {
+    console.log(`Bucket ${bucket} creado`);
+  }
+
   const uploaded = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${key}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${serviceKey}`,
+      ...serviceHeaders(serviceKey),
       'Content-Type': 'image/png',
       'x-upsert': 'true',
     },
@@ -174,7 +189,8 @@ async function ensureImage(
   });
 
   if (!uploaded.ok) {
-    throw new Error(`No se pudo subir la imagen de demostración (${uploaded.status})`);
+    const detail = await uploaded.text().catch(() => '');
+    throw new Error(`No se pudo subir la imagen de demostración (${uploaded.status}): ${detail}`);
   }
 
   await dataSource.query('UPDATE questions SET "imageKey" = $1 WHERE id = $2', [key, questionId]);

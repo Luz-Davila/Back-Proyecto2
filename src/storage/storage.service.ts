@@ -1,9 +1,8 @@
 import { Injectable, InternalServerErrorException, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
-const DEFAULT_BUCKET = 'question-images';
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+import { DEFAULT_BUCKET } from './bucket-config';
+import { ensureBucket } from './ensure-bucket';
+import { serviceHeaders } from './service-headers';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -26,26 +25,29 @@ export class StorageService implements OnModuleInit {
     }
 
     try {
-      await this.ensureBucket();
+      const created = await this.prepareBucket();
+      if (created) {
+        this.logger.log(`Bucket ${this.bucket} creado`);
+      }
     } catch (error) {
       this.logger.warn(`No se pudo preparar el bucket de imágenes: ${(error as Error).message}`);
     }
   }
 
   async upload(path: string, body: Buffer, contentType: string): Promise<void> {
-    await this.ensureBucket();
+    await this.prepareBucket();
 
-    const response = await this.request(
-      `/storage/v1/object/${this.bucket}/${encodePath(path)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
-        body: new Uint8Array(body),
-      },
-    );
+    const response = await this.request(`/storage/v1/object/${this.bucket}/${encodePath(path)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+      body: new Uint8Array(body),
+    });
 
     if (!response.ok) {
-      throw new InternalServerErrorException(`No se pudo subir la imagen (${response.status})`);
+      const detail = await response.text().catch(() => '');
+      throw new InternalServerErrorException(
+        `No se pudo subir la imagen (${response.status}): ${detail}`,
+      );
     }
   }
 
@@ -70,46 +72,27 @@ export class StorageService implements OnModuleInit {
     );
 
     if (!response.ok) {
-      throw new InternalServerErrorException(`No se pudo firmar la imagen (${response.status})`);
+      const detail = await response.text().catch(() => '');
+      throw new InternalServerErrorException(
+        `No se pudo firmar la imagen (${response.status}): ${detail}`,
+      );
     }
 
     const { signedURL } = (await response.json()) as { signedURL: string };
     return `${this.baseUrl}/storage/v1${signedURL}`;
   }
 
-  private async ensureBucket(): Promise<void> {
+  private async prepareBucket(): Promise<boolean> {
     if (this.bucketReady) {
-      return;
+      return false;
     }
     if (!this.serviceKey) {
       throw new InternalServerErrorException('El almacenamiento de imágenes no está configurado');
     }
 
-    const exists = await this.request(`/storage/v1/bucket/${this.bucket}`, { method: 'GET' });
-    if (exists.status === 200) {
-      this.bucketReady = true;
-      return;
-    }
-
-    const created = await this.request('/storage/v1/bucket', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: this.bucket,
-        name: this.bucket,
-        public: false,
-        fileSizeLimit: MAX_FILE_SIZE,
-        allowedMimeTypes: ALLOWED_MIME_TYPES,
-      }),
-    });
-
-    if (!created.ok && created.status !== 409) {
-      throw new InternalServerErrorException(
-        `No se pudo crear el bucket ${this.bucket} (${created.status})`,
-      );
-    }
-
+    const created = await ensureBucket(this.baseUrl, this.serviceKey, this.bucket);
     this.bucketReady = true;
+    return created;
   }
 
   private request(path: string, init: RequestInit): Promise<Response> {
@@ -119,7 +102,7 @@ export class StorageService implements OnModuleInit {
 
     return fetch(`${this.baseUrl}${path}`, {
       ...init,
-      headers: { Authorization: `Bearer ${this.serviceKey}`, ...init.headers },
+      headers: { ...serviceHeaders(this.serviceKey), ...init.headers },
     });
   }
 }

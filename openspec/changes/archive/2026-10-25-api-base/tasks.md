@@ -62,5 +62,5 @@
 ## 10. Datos de demostración y entrega
 
 - [x] 10.1 Seed idempotente de usuario, perfil, quiz y una imagen
-- [ ] 10.2 Verificación del seed contra el proyecto de Supabase (requiere la clave de servicio)
+- [x] 10.2 Verificación del seed contra el proyecto de Supabase (requiere la clave de servicio)
 - [x] 10.3 README del repositorio con variables, arranque y pruebas

@@ -32,14 +32,30 @@ Copia `.env.example` a `.env` y completa los valores:
 Sin la clave de servicio la API funciona, pero las rutas de imágenes responden con error de
 configuración y el seed no puede crear el usuario.
 
+### Claves de Supabase
+
+Supabase ofrece dos formatos de clave:
+
+- **Nuevas** (`sb_publishable_...` y `sb_secret_...`): no son JWT. El backend las envía en el
+  encabezado `apikey`, que el gateway traduce al rol correspondiente.
+- **Heredadas** (empiezan con `eyJ`): son JWT. El backend las envía en `apikey` y también en
+  `Authorization: Bearer`.
+
+La lógica vive en `src/storage/service-headers.ts`, así que no hay que cambiar código al usar
+cualquiera de los dos formatos. El frontend usa la clave pública (`SUPABASE_ANON_KEY`) solo para
+iniciar sesión; nunca la de servicio.
+
 ## Puesta en marcha
 
 ```bash
 npm install
 npm run migration:run   # crea las tablas en Supabase
-npm run seed            # usuario, perfil y quiz de demostración (idempotente)
+npm run seed            # usuario, perfil, quiz de demostración e imagen (idempotente)
 npm run start:dev       # API en http://localhost:3000
 ```
+
+El seed crea el bucket privado de imágenes si no existe, sube una imagen de demostración a la primera
+pregunta y puede ejecutarse varias veces sin duplicar nada.
 
 Comprobaciones rápidas:
 

@@ -1,9 +1,10 @@
 import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
+import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_FILE_SIZE } from '../storage/bucket-config';
 
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+export const MAX_IMAGE_BYTES = MAX_IMAGE_FILE_SIZE;
+export const ALLOWED_IMAGE_TYPES = ALLOWED_IMAGE_MIME_TYPES as readonly AllowedImageType[];
 
-export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
+export type AllowedImageType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 const EXTENSIONS: Record<AllowedImageType, string> = {
   'image/jpeg': 'jpg',
