@@ -11,6 +11,7 @@ export interface AuthenticatedUser {
   id: string;
   email?: string;
   role?: string;
+  displayName?: string;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,10 +40,14 @@ export class AuthService {
       throw new UnauthorizedException('Token sin usuario válido');
     }
 
+    const metadata = payload.user_metadata as { display_name?: unknown } | undefined;
+
     return {
       id: payload.sub,
       email: typeof payload.email === 'string' ? payload.email : undefined,
       role: typeof payload.role === 'string' ? payload.role : undefined,
+      displayName:
+        typeof metadata?.display_name === 'string' ? metadata.display_name : undefined,
     };
   }
 }
