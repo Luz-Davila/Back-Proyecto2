@@ -66,7 +66,7 @@ export class QuestionsService {
     questionId: string,
     dto: UpdateQuestionDto,
   ): Promise<Question> {
-    const question = await this.findOwnedQuestion(user, questionId);
+    const question = await this.findOwned(user, questionId);
 
     return this.dataSource.transaction(async (manager) => {
       const repository = manager.getRepository(Question);
@@ -89,7 +89,7 @@ export class QuestionsService {
   }
 
   async remove(user: AuthenticatedUser, questionId: string): Promise<void> {
-    const question = await this.findOwnedQuestion(user, questionId);
+    const question = await this.findOwned(user, questionId);
 
     await this.dataSource.transaction(async (manager) => {
       const repository = manager.getRepository(Question);
@@ -152,7 +152,10 @@ export class QuestionsService {
     }
   }
 
-  private async findOwnedQuestion(user: AuthenticatedUser, questionId: string): Promise<Question> {
+  /**
+   * Devuelve la pregunta con su quiz solo si el usuario es el dueño.
+   */
+  async findOwned(user: AuthenticatedUser, questionId: string): Promise<Question> {
     const question = await this.questions.findOne({
       where: { id: questionId },
       relations: ['quiz'],
@@ -166,5 +169,9 @@ export class QuestionsService {
     }
 
     return question;
+  }
+
+  async updateImageKey(questionId: string, imageKey: string | null): Promise<void> {
+    await this.questions.update({ id: questionId }, { imageKey });
   }
 }

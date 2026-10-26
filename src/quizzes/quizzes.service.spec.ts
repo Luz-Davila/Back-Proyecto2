@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { ProfilesService } from '../profiles/profiles.service';
+import { StorageService } from '../storage/storage.service';
 import { Quiz } from './quiz.entity';
 import { QuizzesService } from './quizzes.service';
 
@@ -19,6 +20,7 @@ describe('QuizzesService', () => {
     remove: jest.Mock;
   };
   let profiles: { getOrCreate: jest.Mock };
+  let storage: { signedUrl: jest.Mock };
   let service: QuizzesService;
 
   beforeEach(() => {
@@ -39,14 +41,22 @@ describe('QuizzesService', () => {
     };
 
     profiles = { getOrCreate: jest.fn().mockResolvedValue({ userId: OWNER.id }) };
+    storage = { signedUrl: jest.fn(async (key: string) => `https://storage.test/${key}`) };
     service = new QuizzesService(
       repository as unknown as Repository<Quiz>,
       profiles as unknown as ProfilesService,
+      storage as unknown as StorageService,
     );
   });
 
   function quizOf(ownerId: string): Quiz {
-    return { id: QUIZ_ID, ownerId, title: 'Quiz de prueba', description: null } as Quiz;
+    return {
+      id: QUIZ_ID,
+      ownerId,
+      title: 'Quiz de prueba',
+      description: null,
+      questions: [],
+    } as unknown as Quiz;
   }
 
   it('crea el cuestionario con el dueño del token', async () => {
