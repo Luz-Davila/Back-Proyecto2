@@ -46,6 +46,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Herramientas de agentes (se regeneran con `openspec update`)
+.opencode/
+
 # Runtime data
 pids
 *.pid

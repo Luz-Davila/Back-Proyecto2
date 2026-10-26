@@ -3,9 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { ProfilesService } from '../profiles/profiles.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
+import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
+
+export type QuestionWithImage = Question & { imageUrl: string | null };
+export type QuizDetail = Omit<Quiz, 'questions'> & { questions: QuestionWithImage[] };
+
+const SIGNED_URL_SECONDS = 600;
 
 @Injectable()
 export class QuizzesService {
@@ -13,6 +20,7 @@ export class QuizzesService {
     @InjectRepository(Quiz)
     private readonly quizzes: Repository<Quiz>,
     private readonly profiles: ProfilesService,
+    private readonly storage: StorageService,
   ) {}
 
   list(user: AuthenticatedUser): Promise<Quiz[]> {
@@ -36,7 +44,7 @@ export class QuizzesService {
     return this.quizzes.save(quiz);
   }
 
-  async findOne(user: AuthenticatedUser, id: string): Promise<Quiz> {
+  async findOne(user: AuthenticatedUser, id: string): Promise<QuizDetail> {
     const quiz = await this.quizzes.findOne({
       where: { id, ownerId: user.id },
       relations: ['questions'],
@@ -47,7 +55,16 @@ export class QuizzesService {
       throw new NotFoundException('Cuestionario no encontrado');
     }
 
-    return quiz;
+    const questions = await Promise.all(
+      quiz.questions.map(async (question) => ({
+        ...question,
+        imageUrl: question.imageKey
+          ? await this.storage.signedUrl(question.imageKey, SIGNED_URL_SECONDS)
+          : null,
+      })),
+    );
+
+    return { ...quiz, questions };
   }
 
   async update(user: AuthenticatedUser, id: string, dto: UpdateQuizDto): Promise<Quiz> {
