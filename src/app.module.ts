@@ -8,6 +8,8 @@ import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { TelemetryLifecycle } from './telemetry-lifecycle';
 
 @Module({
   imports: [
@@ -21,8 +23,9 @@ import { QuizzesModule } from './quizzes/quizzes.module';
     HealthModule,
     ProfilesModule,
     QuizzesModule,
+    SessionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, TelemetryLifecycle],
 })
 export class AppModule {}

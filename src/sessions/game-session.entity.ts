@@ -10,12 +10,21 @@ import {
 } from 'typeorm';
 import { Profile } from '../profiles/profile.entity';
 import { Quiz } from '../quizzes/quiz.entity';
+import type { QuestionDurationSeconds } from './session.contracts';
 
 export const SESSION_STATUSES = ['WAITING', 'IN_PROGRESS', 'FINISHED'] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 @Entity('game_sessions')
 @Check(`"status" IN ('WAITING', 'IN_PROGRESS', 'FINISHED')`)
+@Check(
+  'CHK_game_sessions_question_duration',
+  '"questionDurationSeconds" BETWEEN 5 AND 120',
+)
+@Check(
+  'CHK_game_sessions_review_duration',
+  '"reviewDurationSeconds" BETWEEN 3 AND 15',
+)
 export class GameSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -44,6 +53,12 @@ export class GameSession {
 
   @Column({ type: 'varchar', length: 20, default: 'WAITING' })
   status: SessionStatus;
+
+  @Column({ type: 'int', default: 30 })
+  questionDurationSeconds: QuestionDurationSeconds;
+
+  @Column({ type: 'int', default: 5 })
+  reviewDurationSeconds: number;
 
   @Column({ type: 'int', default: -1 })
   currentIndex: number;

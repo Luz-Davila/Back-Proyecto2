@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 import { AuthenticatedUser } from '../auth/auth.service';
 import { Profile } from './profile.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -15,20 +16,30 @@ export class ProfilesService {
     private readonly profiles: Repository<Profile>,
   ) {}
 
-  async getOrCreate(user: AuthenticatedUser): Promise<Profile> {
-    await this.profiles
+  async getOrCreate(
+    user: AuthenticatedUser,
+    manager?: EntityManager,
+  ): Promise<Profile> {
+    const profiles = manager ? manager.getRepository(Profile) : this.profiles;
+    await profiles
       .createQueryBuilder()
       .insert()
       .values({ userId: user.id, displayName: initialDisplayName(user) })
       .orIgnore()
       .execute();
 
-    return this.profiles.findOneByOrFail({ userId: user.id });
+    return profiles.findOneByOrFail({ userId: user.id });
   }
 
-  async update(user: AuthenticatedUser, dto: UpdateProfileDto): Promise<Profile> {
+  async update(
+    user: AuthenticatedUser,
+    dto: UpdateProfileDto,
+  ): Promise<Profile> {
     await this.getOrCreate(user);
-    await this.profiles.update({ userId: user.id }, { displayName: dto.displayName });
+    await this.profiles.update(
+      { userId: user.id },
+      { displayName: dto.displayName },
+    );
 
     return this.profiles.findOneByOrFail({ userId: user.id });
   }

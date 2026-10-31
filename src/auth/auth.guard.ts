@@ -19,6 +19,9 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Socket authentication is enforced by its namespace middleware/dispatcher.
+    // Do not interpret a Socket.IO packet as an Express request.
+    if (context.getType() === 'ws') return true;
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),

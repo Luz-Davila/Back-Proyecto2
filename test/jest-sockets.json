@@ -1,0 +1,9 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testRegex": "sockets/.*\\.sockets-spec\\.ts$",
+  "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+  "globalSetup": "<rootDir>/support/require-session-test-database.ts",
+  "testEnvironment": "node",
+  "testTimeout": 60000
+}

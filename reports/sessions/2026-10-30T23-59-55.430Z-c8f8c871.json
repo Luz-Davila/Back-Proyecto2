@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-30T23:59:55.430Z",
+  "options": {
+    "levels": [
+      4,
+      8
+    ],
+    "seconds": 3,
+    "ackTimeoutMs": 10000,
+    "p95Ms": 1000,
+    "p99Ms": 2000
+  },
+  "levels": [
+    {
+      "players": 4,
+      "targetSockets": 7,
+      "minObservedSockets": 7,
+      "peakObservedSockets": 7,
+      "durationMs": 3077.2986999999994,
+      "warmupMs": 3968.144699999997,
+      "commands": 152,
+      "expectedRejections": 4,
+      "unexpectedErrors": 0,
+      "timeouts": 0,
+      "ackLatencyMs": {
+        "samples": 132,
+        "p50": 23.10440000000017,
+        "p95": 36.114400000002206,
+        "p99": 39.8051000000014
+      },
+      "invariantFailures": [],
+      "passed": true,
+      "reason": "Concurrencia, presupuestos e invariantes verificados"
+    },
+    {
+      "players": 8,
+      "targetSockets": 11,
+      "minObservedSockets": 11,
+      "peakObservedSockets": 11,
+      "durationMs": 3087.7399000000005,
+      "warmupMs": 4959.866699999999,
+      "commands": 220,
+      "expectedRejections": 4,
+      "unexpectedErrors": 0,
+      "timeouts": 0,
+      "ackLatencyMs": {
+        "samples": 192,
+        "p50": 45.64100000000326,
+        "p95": 71.99020000000019,
+        "p99": 113.49040000000241
+      },
+      "invariantFailures": [],
+      "passed": true,
+      "reason": "Concurrencia, presupuestos e invariantes verificados"
+    }
+  ],
+  "highestPassedLevel": 8,
+  "environment": {
+    "node": "v22.20.0",
+    "platform": "win32",
+    "arch": "x64",
+    "os": "10.0.19045",
+    "cpu": "Intel(R) Core(TM) i7-4712MQ CPU @ 2.30GHz",
+    "logicalCpus": 8,
+    "revision": "753709f605400c40df40bf9840e54b802779b8e3",
+    "dirty": true,
+    "backend": "one local child process per level",
+    "database": "PostgreSQL local exclusive TEST_DATABASE_URL",
+    "auth": "local ES256 JWT",
+    "storage": "simulated",
+    "cpuUsage": null,
+    "databaseResourceUsage": null
+  },
+  "latencyScope": "client ack RTT during load window; warmup/verification excluded from percentiles",
+  "external": {
+    "physicalDevices": "pending",
+    "vpsRestart": "pending",
+    "grafana": "pending"
+  }
+}

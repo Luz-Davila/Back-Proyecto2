@@ -54,4 +54,13 @@ export class SessionQuestion {
 
   @Column({ type: 'timestamptz', nullable: true })
   closesAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  closedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  reviewEndsAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  scoredAt: Date | null;
 }

@@ -1,5 +1,5 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { jwtVerify, type JWTVerifyGetKey, type JWTPayload } from 'jose';
 import {
   SUPABASE_ALGORITHMS,
   SUPABASE_AUDIENCE,
@@ -14,7 +14,8 @@ export interface AuthenticatedUser {
   displayName?: string;
 }
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class AuthService {
@@ -24,7 +25,25 @@ export class AuthService {
   ) {}
 
   async verifyAccessToken(token: string): Promise<AuthenticatedUser> {
-    let payload: Record<string, unknown>;
+    return this.user(await this.verify(token));
+  }
+
+  async verifySocketToken(
+    token: string,
+  ): Promise<{ user: AuthenticatedUser; expiresAt: number }> {
+    const payload = await this.verify(token);
+    if (
+      typeof payload.exp !== 'number' ||
+      !Number.isFinite(payload.exp) ||
+      payload.exp * 1000 <= Date.now()
+    ) {
+      throw new UnauthorizedException('Token sin expiración válida');
+    }
+    return { user: this.user(payload), expiresAt: payload.exp * 1000 };
+  }
+
+  private async verify(token: string): Promise<JWTPayload> {
+    let payload: JWTPayload;
 
     try {
       ({ payload } = await jwtVerify(token, this.keys, {
@@ -40,14 +59,21 @@ export class AuthService {
       throw new UnauthorizedException('Token sin usuario válido');
     }
 
-    const metadata = payload.user_metadata as { display_name?: unknown } | undefined;
+    return payload;
+  }
+
+  private user(payload: JWTPayload): AuthenticatedUser {
+    const metadata = payload.user_metadata as
+      { display_name?: unknown } | undefined;
 
     return {
-      id: payload.sub,
+      id: payload.sub!,
       email: typeof payload.email === 'string' ? payload.email : undefined,
       role: typeof payload.role === 'string' ? payload.role : undefined,
       displayName:
-        typeof metadata?.display_name === 'string' ? metadata.display_name : undefined,
+        typeof metadata?.display_name === 'string'
+          ? metadata.display_name
+          : undefined,
     };
   }
 }

@@ -6,11 +6,11 @@ import { Public } from './public.decorator';
 
 class PublicController {
   @Public()
-  open() {
+  open(this: void) {
     return 'abierto';
   }
 
-  closed() {
+  closed(this: void) {
     return 'cerrado';
   }
 }
@@ -20,6 +20,7 @@ function createContext(
   request: { headers: Record<string, string | undefined>; user?: unknown },
 ): ExecutionContext {
   return {
+    getType: () => 'http',
     getHandler: () => handler,
     getClass: () => PublicController,
     switchToHttp: () => ({ getRequest: () => request }),
@@ -32,20 +33,28 @@ describe('AuthGuard', () => {
 
   beforeEach(() => {
     verifyAccessToken = jest.fn();
-    guard = new AuthGuard(new Reflector(), { verifyAccessToken } as unknown as AuthService);
+    guard = new AuthGuard(new Reflector(), {
+      verifyAccessToken,
+    } as unknown as AuthService);
   });
 
   it('permite el acceso a rutas públicas sin token', async () => {
-    const context = createContext(PublicController.prototype.open, { headers: {} });
+    const context = createContext(PublicController.prototype.open, {
+      headers: {},
+    });
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(verifyAccessToken).not.toHaveBeenCalled();
   });
 
   it('rechaza una ruta protegida sin encabezado Authorization', async () => {
-    const context = createContext(PublicController.prototype.closed, { headers: {} });
+    const context = createContext(PublicController.prototype.closed, {
+      headers: {},
+    });
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
     expect(verifyAccessToken).not.toHaveBeenCalled();
   });
 
@@ -54,19 +63,26 @@ describe('AuthGuard', () => {
       headers: { authorization: 'Basic abc123' },
     });
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
     expect(verifyAccessToken).not.toHaveBeenCalled();
   });
 
   it('adjunta el usuario verificado a la petición', async () => {
-    const user = { id: '6f1c2b1e-8d2a-4c3b-9e1f-0a1b2c3d4e5f', email: 'prueba@correo.test' };
+    const user = {
+      id: '6f1c2b1e-8d2a-4c3b-9e1f-0a1b2c3d4e5f',
+      email: 'prueba@correo.test',
+    };
     verifyAccessToken.mockResolvedValue(user);
     const request: { headers: Record<string, string>; user?: unknown } = {
       headers: { authorization: 'Bearer token-de-prueba' },
     };
 
     await expect(
-      guard.canActivate(createContext(PublicController.prototype.closed, request)),
+      guard.canActivate(
+        createContext(PublicController.prototype.closed, request),
+      ),
     ).resolves.toBe(true);
 
     expect(verifyAccessToken).toHaveBeenCalledWith('token-de-prueba');
@@ -74,11 +90,18 @@ describe('AuthGuard', () => {
   });
 
   it('propaga el rechazo cuando el token no es válido', async () => {
-    verifyAccessToken.mockRejectedValue(new UnauthorizedException('Token inválido o expirado'));
-    const request = { headers: { authorization: 'Bearer token-malo' }, user: undefined };
+    verifyAccessToken.mockRejectedValue(
+      new UnauthorizedException('Token inválido o expirado'),
+    );
+    const request = {
+      headers: { authorization: 'Bearer token-malo' },
+      user: undefined,
+    };
 
     await expect(
-      guard.canActivate(createContext(PublicController.prototype.closed, request)),
+      guard.canActivate(
+        createContext(PublicController.prototype.closed, request),
+      ),
     ).rejects.toThrow(UnauthorizedException);
     expect(request.user).toBeUndefined();
   });

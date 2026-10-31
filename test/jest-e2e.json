@@ -1,6 +1,7 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
+  "globalSetup": "<rootDir>/support/require-session-test-database.ts",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {

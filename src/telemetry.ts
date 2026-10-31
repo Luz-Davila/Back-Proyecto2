@@ -4,10 +4,13 @@ import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { registerTelemetry } from './telemetry-lifecycle';
+import { TELEMETRY_PRIVACY } from './telemetry-privacy';
 
 /**
  * Arranca OpenTelemetry antes de cargar la aplicación para que la
- * instrumentación automática capture HTTP, Express y PostgreSQL.
+ * instrumentos usen el proveedor configurado. Se excluyen HTTP/PG automáticos
+ * para no exportar URLs con códigos, cabeceras o sentencias SQL sin sanear.
  *
  * Si OTEL_EXPORTER_OTLP_ENDPOINT no está definido, la telemetría queda
  * desactivada y la API funciona igual.
@@ -28,23 +31,12 @@ export function startTelemetry(): NodeSDK | null {
         exportIntervalMillis: 15_000,
       }),
     ],
-    instrumentations: [
-      getNodeAutoInstrumentations({
-        '@opentelemetry/instrumentation-fs': { enabled: false },
-      }),
-    ],
+    instrumentations: [getNodeAutoInstrumentations(TELEMETRY_PRIVACY)],
   });
 
   sdk.start();
 
-  const shutdown = () => {
-    sdk
-      .shutdown()
-      .catch(() => undefined)
-      .finally(() => process.exit(0));
-  };
-  process.once('SIGTERM', shutdown);
-  process.once('SIGINT', shutdown);
+  registerTelemetry(sdk);
 
   return sdk;
 }

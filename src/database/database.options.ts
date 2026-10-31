@@ -1,7 +1,10 @@
 import { join } from 'path';
 import { DataSourceOptions } from 'typeorm';
 
-export function buildDatabaseOptions(url: string, ssl: boolean): DataSourceOptions {
+export function buildDatabaseOptions(
+  url: string,
+  ssl: boolean,
+): Extract<DataSourceOptions, { type: 'postgres' }> {
   return {
     type: 'postgres',
     url,
