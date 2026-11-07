@@ -12,6 +12,8 @@ export interface AuthenticatedUser {
   email?: string;
   role?: string;
   displayName?: string;
+  /** Rol de la app (profesor/estudiante), distinto del `role` del JWT de Supabase. */
+  appRole?: 'teacher' | 'student';
 }
 
 const UUID_PATTERN =
@@ -64,7 +66,12 @@ export class AuthService {
 
   private user(payload: JWTPayload): AuthenticatedUser {
     const metadata = payload.user_metadata as
-      { display_name?: unknown } | undefined;
+      | { display_name?: unknown; app_role?: unknown }
+      | undefined;
+    const appRole =
+      metadata?.app_role === 'teacher' || metadata?.app_role === 'student'
+        ? metadata.app_role
+        : undefined;
 
     return {
       id: payload.sub!,
@@ -74,6 +81,7 @@ export class AuthService {
         typeof metadata?.display_name === 'string'
           ? metadata.display_name
           : undefined,
+      ...(appRole ? { appRole } : {}),
     };
   }
 }

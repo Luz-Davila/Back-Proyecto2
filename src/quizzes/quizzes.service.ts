@@ -33,7 +33,7 @@ export class QuizzesService {
   }
 
   async create(user: AuthenticatedUser, dto: CreateQuizDto): Promise<Quiz> {
-    await this.profiles.getOrCreate(user);
+    await this.profiles.requireTeacher(user);
 
     const quiz = this.quizzes.create({
       ownerId: user.id,

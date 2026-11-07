@@ -28,8 +28,10 @@ import { SessionCodeParamsDto } from './dto/session-code-params.dto';
 import { SessionRoomsService } from './session-rooms.service';
 import {
   JOIN_SESSION_SCHEMA,
+  PLAYED_SESSION_ITEM_SCHEMA,
   SESSION_ERROR_CATALOG,
   SESSION_ERROR_SCHEMA,
+  SESSION_HISTORY_ITEM_SCHEMA,
   SESSION_STATE_SCHEMA,
   ROOM_ENVELOPE_SCHEMA,
 } from './session.openapi';
@@ -78,6 +80,32 @@ export class SessionsController {
   @ApiOkResponse({ schema: JOIN_SESSION_SCHEMA })
   join(@CurrentUser() user: AuthenticatedUser, @Body() input: JoinSessionDto) {
     return this.rooms.join(user, input.code);
+  }
+
+  @Get('history')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary:
+      'Lista las partidas finalizadas del anfitrión, con ganador, puntos y aciertos',
+  })
+  @ApiOkResponse({
+    schema: { type: 'array', items: SESSION_HISTORY_ITEM_SCHEMA },
+  })
+  history(@CurrentUser() user: AuthenticatedUser) {
+    return this.rooms.history(user);
+  }
+
+  @Get('played')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary:
+      'Lista las partidas finalizadas en las que el usuario participó, con su puesto y puntaje',
+  })
+  @ApiOkResponse({
+    schema: { type: 'array', items: PLAYED_SESSION_ITEM_SCHEMA },
+  })
+  played(@CurrentUser() user: AuthenticatedUser) {
+    return this.rooms.played(user);
   }
 
   @Get(':code/state')

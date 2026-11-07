@@ -17,6 +17,8 @@ import { SessionStateProjector } from './session-state.projector';
 import type {
   CreateSessionInput,
   JoinSessionResult,
+  PlayedSessionItem,
+  SessionHistoryItem,
   SessionState,
 } from './session.contracts';
 import {
@@ -120,6 +122,14 @@ export class SessionRoomsService {
       }
     }
     throw new SessionError('ROOM_CODE_UNAVAILABLE');
+  }
+
+  history(user: AuthenticatedUser): Promise<SessionHistoryItem[]> {
+    return this.repository.historyForHost(user.id);
+  }
+
+  played(user: AuthenticatedUser): Promise<PlayedSessionItem[]> {
+    return this.repository.playedForUser(user.id);
   }
 
   async state(

@@ -10,6 +10,10 @@ export const SESSION_ERRORS = {
     statusCode: 403,
     message: 'Solo el host puede realizar esta acción',
   },
+  TEACHER_REQUIRED: {
+    statusCode: 403,
+    message: 'Solo el profesor puede crear y dirigir cuestionarios',
+  },
   HOST_CANNOT_PARTICIPATE: {
     statusCode: 403,
     message: 'El host dirige la sala y no juega en ella',

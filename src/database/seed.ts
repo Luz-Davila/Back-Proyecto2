@@ -45,20 +45,22 @@ async function main(): Promise<void> {
     console.log(`Usuario de prueba: ${user.email} (${user.id})`);
 
     await dataSource.query(
-      `INSERT INTO profiles("userId", "displayName") VALUES ($1, $2)
-       ON CONFLICT ("userId") DO UPDATE SET "displayName" = EXCLUDED."displayName"`,
+      `INSERT INTO profiles("userId", "displayName", role) VALUES ($1, $2, 'teacher')
+       ON CONFLICT ("userId") DO UPDATE SET "displayName" = EXCLUDED."displayName", role = 'teacher'`,
       [user.id, 'Profe de prueba'],
     );
 
     const quizId = await ensureQuiz(dataSource, user.id);
     await ensureQuestions(dataSource, quizId);
     await ensureImage(dataSource, supabaseUrl, serviceKey, bucket, quizId);
+    const history = await ensureDemoHistory(dataSource, user.id, quizId);
 
     const summary = await dataSource.query(
       `SELECT count(*)::int AS preguntas FROM questions WHERE "quizId" = $1`,
       [quizId],
     );
     console.log(`Quiz "${QUIZ_TITLE}" listo con ${summary[0].preguntas} preguntas`);
+    console.log(`Historial demo: ${history.join(', ')}`);
   } finally {
     await dataSource.destroy();
   }
@@ -195,6 +197,211 @@ async function ensureImage(
 
   await dataSource.query('UPDATE questions SET "imageKey" = $1 WHERE id = $2', [key, questionId]);
   console.log('Imagen de demostración cargada en la primera pregunta');
+}
+
+const DEMO_PLAYERS = [
+  { userId: 'a1e1b0c0-0001-4000-8000-000000000001', displayName: 'Valeria' },
+  { userId: 'a1e1b0c0-0001-4000-8000-000000000002', displayName: 'Diego' },
+  { userId: 'a1e1b0c0-0001-4000-8000-000000000003', displayName: 'Camila' },
+  { userId: 'a1e1b0c0-0001-4000-8000-000000000004', displayName: 'Andrés' },
+] as const;
+
+type DemoQuestion = {
+  id: string;
+  statement: string;
+  correctBoolean: boolean;
+  position: number;
+  imageKey: string | null;
+};
+
+async function ensureDemoHistory(
+  dataSource: DataSource,
+  hostId: string,
+  quizId: string,
+): Promise<string[]> {
+  for (const player of DEMO_PLAYERS) {
+    await dataSource.query(
+      `INSERT INTO profiles("userId", "displayName") VALUES ($1, $2)
+       ON CONFLICT ("userId") DO UPDATE SET "displayName" = EXCLUDED."displayName"`,
+      [player.userId, player.displayName],
+    );
+  }
+
+  const questions = (await dataSource.query(
+    `SELECT id, statement, "correctBoolean", position, "imageKey"
+     FROM questions WHERE "quizId" = $1 ORDER BY position`,
+    [quizId],
+  )) as DemoQuestion[];
+
+  const [valeria, diego, camila, andres] = DEMO_PLAYERS;
+  await ensureFinishedSession(dataSource, {
+    code: 'PAST23',
+    hostId,
+    quizId,
+    quizTitle: QUIZ_TITLE,
+    finishedAt: new Date(Date.now() - 86_400_000),
+    questions,
+    players: [
+      { ...valeria, choices: questions.map((q) => q.correctBoolean) },
+      {
+        ...diego,
+        choices: questions.map((q, i) => (i % 2 === 0 ? q.correctBoolean : !q.correctBoolean)),
+      },
+      { ...camila, choices: questions.map((q) => !q.correctBoolean) },
+    ],
+  });
+  await ensureFinishedSession(dataSource, {
+    code: 'BEST42',
+    hostId,
+    quizId,
+    quizTitle: QUIZ_TITLE,
+    finishedAt: new Date(Date.now() - 3_600_000),
+    questions: questions.slice(0, 2),
+    players: [
+      { ...andres, choices: questions.slice(0, 2).map((q) => q.correctBoolean) },
+      {
+        ...valeria,
+        choices: questions.slice(0, 2).map((q, i) =>
+          i === 0 ? q.correctBoolean : !q.correctBoolean,
+        ),
+      },
+    ],
+  });
+  const extras = [
+    { code: 'GAME42', title: 'Repaso de funciones' },
+    { code: 'CUPA23', title: 'Tipos y paradigmas' },
+    { code: 'FAST23', title: 'Programación lógica' },
+    { code: 'WEEK23', title: 'Evaluación semanal' },
+  ] as const;
+  const shortQuestions = questions.slice(0, 2);
+  for (const [index, extra] of extras.entries()) {
+    await ensureFinishedSession(dataSource, {
+      code: extra.code,
+      hostId,
+      quizId,
+      quizTitle: extra.title,
+      finishedAt: new Date(Date.now() - (index + 2) * 3_600_000),
+      questions: shortQuestions,
+      players: [
+        { ...valeria, choices: shortQuestions.map((q) => q.correctBoolean) },
+        {
+          ...diego,
+          choices: shortQuestions.map((q, i) => (i === 0 ? q.correctBoolean : !q.correctBoolean)),
+        },
+      ],
+    });
+  }
+  return ['PAST23', 'BEST42', ...extras.map((extra) => extra.code)];
+}
+
+async function ensureFinishedSession(
+  dataSource: DataSource,
+  input: {
+    code: string;
+    hostId: string;
+    quizId: string;
+    quizTitle: string;
+    finishedAt: Date;
+    questions: DemoQuestion[];
+    players: Array<{
+      userId: string;
+      displayName: string;
+      choices: boolean[];
+    }>;
+  },
+): Promise<void> {
+  const existing = await dataSource.query(
+    'SELECT id FROM game_sessions WHERE code = $1 LIMIT 1',
+    [input.code],
+  );
+  if (existing.length > 0 || input.questions.length === 0) return;
+
+  const startedAt = new Date(input.finishedAt.getTime() - 12 * 60_000);
+  const [session] = await dataSource.query(
+    `INSERT INTO game_sessions(
+       code, "quizId", "hostId", "quizTitle", status,
+       "questionDurationSeconds", "reviewDurationSeconds", "currentIndex",
+       "startedAt", "finishedAt"
+     ) VALUES ($1, $2, $3, $4, 'FINISHED', 15, 5, $5, $6, $7)
+     RETURNING id`,
+    [
+      input.code,
+      input.quizId,
+      input.hostId,
+      input.quizTitle,
+      input.questions.length - 1,
+      startedAt,
+      input.finishedAt,
+    ],
+  );
+  const sessionId = session.id as string;
+
+  const questionIds: string[] = [];
+  for (const question of input.questions) {
+    const openedAt = new Date(startedAt.getTime() + question.position * 20_000);
+    const closedAt = new Date(openedAt.getTime() + 15_000);
+    const [row] = await dataSource.query(
+      `INSERT INTO session_questions(
+         "sessionId", "originalQuestionId", position, statement, "correctBoolean",
+         "imageKey", status, "openedAt", "closesAt", "closedAt", "reviewEndsAt", "scoredAt"
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'CLOSED', $7, $8, $8, $9, $8)
+       RETURNING id`,
+      [
+        sessionId,
+        question.id,
+        question.position,
+        question.statement,
+        question.correctBoolean,
+        question.imageKey,
+        openedAt,
+        closedAt,
+        new Date(closedAt.getTime() + 5_000),
+      ],
+    );
+    questionIds.push(row.id as string);
+  }
+
+  const totals = new Map<string, number>();
+  for (const player of input.players) {
+    const [participant] = await dataSource.query(
+      `INSERT INTO session_participants("sessionId", "userId", "displayName", "joinedAt")
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [sessionId, player.userId, player.displayName, startedAt],
+    );
+    const participantId = participant.id as string;
+    let total = 0;
+    for (const [index, choice] of player.choices.entries()) {
+      const question = input.questions[index];
+      const questionId = questionIds[index];
+      if (!question || !questionId) continue;
+      const score = choice === question.correctBoolean ? 3 : 0;
+      total += score;
+      await dataSource.query(
+        `INSERT INTO answers("sessionQuestionId", "participantId", choice, "answeredAt", score)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          questionId,
+          participantId,
+          choice,
+          new Date(startedAt.getTime() + question.position * 20_000 + 800),
+          score,
+        ],
+      );
+    }
+    totals.set(participantId, total);
+  }
+
+  const ranked = [...totals.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+  const scores = [...new Set(ranked.map(([, score]) => score))];
+  for (const [participantId, totalScore] of ranked) {
+    await dataSource.query(
+      `INSERT INTO game_results("sessionId", "participantId", "totalScore", rank)
+       VALUES ($1, $2, $3, $4)`,
+      [sessionId, participantId, totalScore, scores.indexOf(totalScore) + 1],
+    );
+  }
 }
 
 main().catch((error) => {

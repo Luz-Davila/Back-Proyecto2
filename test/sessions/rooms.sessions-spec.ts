@@ -37,7 +37,7 @@ describe('Contratos REST y participación de salas', () => {
     };
   }
 
-  it.each(['create', 'join', 'state', 'leave'])(
+  it.each(['create', 'join', 'state', 'leave', 'history', 'played'])(
     'rechaza %s sin JWT y con token inválido',
     async (route) => {
       const { state } = await room();
@@ -51,9 +51,13 @@ describe('Contratos REST y participación de salas', () => {
                   .send({ code: state.code })
               : route === 'state'
                 ? request(ctx.app.getHttpServer()).get(`/sessions/${state.id}`)
-                : request(ctx.app.getHttpServer()).delete(
-                    `/sessions/${state.id}/participants/me`,
-                  );
+                : route === 'history'
+                  ? request(ctx.app.getHttpServer()).get('/sessions/history')
+                  : route === 'played'
+                    ? request(ctx.app.getHttpServer()).get('/sessions/played')
+                    : request(ctx.app.getHttpServer()).delete(
+                      `/sessions/${state.id}/participants/me`,
+                    );
         if (token) operation.set('Authorization', token);
         const response = await operation.expect(401);
         expect(response.body).toEqual({
@@ -445,6 +449,94 @@ describe('Contratos REST y participación de salas', () => {
     ).not.toHaveProperty('code');
   });
 
+  it('lista solo las partidas finalizadas del anfitrión con ganador y aciertos', async () => {
+    const { owner, quiz, state } = await room();
+    const winner = { id: randomUUID(), displayName: 'Ana Ganadora' };
+    const runnerUp = { id: randomUUID(), displayName: 'Luis' };
+    await ctx.rooms.join(winner, state.code);
+    await ctx.rooms.join(runnerUp, state.code);
+    await ctx.lifecycle.start({ sessionId: state.id, actorId: owner.id });
+    const question = (await ctx.repository.read(state.id)).questions[0];
+    await ctx.answers.submit(winner, {
+      sessionQuestionId: question.id,
+      choice: question.correctBoolean,
+    });
+    await ctx.answers.submit(runnerUp, {
+      sessionQuestionId: question.id,
+      choice: !question.correctBoolean,
+    });
+    await ctx.lifecycle.finish({ sessionId: state.id, actorId: owner.id });
+    await ctx.rooms.create(owner, { quizId: quiz.id });
+    const stranger = await ctx.seedQuiz();
+    const foreign = await ctx.rooms.create(stranger.owner, {
+      quizId: stranger.quiz.id,
+    });
+    await ctx.rooms.join(ctx.user(), foreign.code);
+    await ctx.lifecycle.start({
+      sessionId: foreign.id,
+      actorId: stranger.owner.id,
+    });
+    await ctx.lifecycle.finish({
+      sessionId: foreign.id,
+      actorId: stranger.owner.id,
+    });
+
+    const response = await request(ctx.app.getHttpServer())
+      .get('/sessions/history')
+      .set('Authorization', ctx.token(owner))
+      .expect(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({
+      id: state.id,
+      code: state.code,
+      quizTitle: 'Cuestionario de prueba',
+      winnerDisplayName: 'Ana Ganadora',
+      winnerScore: 3,
+      participantCount: 2,
+      questionsCount: 2,
+      correctCount: 1,
+      wrongCount: 1,
+      unansweredCount: 2,
+    });
+    expect(response.body[0].questions).toEqual([
+      expect.objectContaining({
+        position: 0,
+        statement: 'Pregunta 0',
+        correctBoolean: true,
+        correctCount: 1,
+        wrongCount: 1,
+        unansweredCount: 0,
+        correctNames: ['Ana Ganadora'],
+        wrongNames: ['Luis'],
+        unansweredNames: [],
+      }),
+      expect.objectContaining({
+        position: 1,
+        statement: 'Pregunta 1',
+        correctBoolean: false,
+        correctCount: 0,
+        wrongCount: 0,
+        unansweredCount: 2,
+      }),
+    ]);
+    expect(response.body[0].ranking).toEqual([
+      expect.objectContaining({
+        displayName: 'Ana Ganadora',
+        rank: 1,
+        totalScore: 3,
+      }),
+      expect.objectContaining({ displayName: 'Luis', rank: 2, totalScore: 0 }),
+    ]);
+    expect(
+      (
+        await request(ctx.app.getHttpServer())
+          .get('/sessions/history')
+          .set('Authorization', ctx.token(winner))
+          .expect(200)
+      ).body,
+    ).toEqual([]);
+  });
+
   it('publica rutas y schemas en OpenAPI sin endpoints de control nuevos', () => {
     const document = SwaggerModule.createDocument(
       ctx.app,
@@ -456,7 +548,9 @@ describe('Contratos REST y participación de salas', () => {
         .sort(),
     ).toEqual([
       '/sessions',
+      '/sessions/history',
       '/sessions/join',
+      '/sessions/played',
       '/sessions/{code}/state',
       '/sessions/{id}',
       '/sessions/{id}/participants/me',

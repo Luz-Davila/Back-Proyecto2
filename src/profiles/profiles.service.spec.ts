@@ -39,7 +39,29 @@ describe('ProfilesService', () => {
 
     await service.getOrCreate(user);
 
-    expect(values).toHaveBeenCalledWith({ userId: USER_ID, displayName: 'Ana Pérez' });
+    expect(values).toHaveBeenCalledWith({
+      userId: USER_ID,
+      displayName: 'Ana Pérez',
+      role: 'student',
+    });
+  });
+
+  it('crea el perfil de profesor cuando el alta trae appRole', async () => {
+    const user: AuthenticatedUser = {
+      id: USER_ID,
+      email: 'ana@correo.test',
+      displayName: 'Ana Pérez',
+      appRole: 'teacher',
+    };
+    findOneByOrFail.mockResolvedValue(profileFor('Ana Pérez'));
+
+    await service.getOrCreate(user);
+
+    expect(values).toHaveBeenCalledWith({
+      userId: USER_ID,
+      displayName: 'Ana Pérez',
+      role: 'teacher',
+    });
   });
 
   it('usa la parte local del correo cuando no hay metadato', async () => {
@@ -48,7 +70,11 @@ describe('ProfilesService', () => {
 
     await service.getOrCreate(user);
 
-    expect(values).toHaveBeenCalledWith({ userId: USER_ID, displayName: 'ana.perez' });
+    expect(values).toHaveBeenCalledWith({
+      userId: USER_ID,
+      displayName: 'ana.perez',
+      role: 'student',
+    });
   });
 
   it('usa un nombre por defecto cuando no hay metadato ni correo', async () => {
@@ -56,7 +82,11 @@ describe('ProfilesService', () => {
 
     await service.getOrCreate({ id: USER_ID });
 
-    expect(values).toHaveBeenCalledWith({ userId: USER_ID, displayName: 'Jugador' });
+    expect(values).toHaveBeenCalledWith({
+      userId: USER_ID,
+      displayName: 'Jugador',
+      role: 'student',
+    });
   });
 
   it('no sobrescribe un perfil existente al volver a consultarlo', async () => {

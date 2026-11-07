@@ -52,12 +52,13 @@ iniciar sesión; nunca la de servicio.
 ```bash
 npm install
 npm run migration:run   # crea las tablas en Supabase
-npm run seed            # usuario, perfil, quiz de demostración e imagen (idempotente)
+npm run seed            # usuario, perfil, quiz, imagen e historial de partidas (idempotente)
 npm run start:dev       # API en http://localhost:3000
 ```
 
 El seed crea el bucket privado de imágenes si no existe, sube una imagen de demostración a la primera
-pregunta y puede ejecutarse varias veces sin duplicar nada.
+pregunta, deja dos partidas finalizadas (`PAST23` y `BEST42`) en el historial del anfitrión y puede
+ejecutarse varias veces sin duplicar nada. Los jugadores demo son Valeria, Diego, Camila y Andrés.
 
 Comprobaciones rápidas:
 
@@ -231,6 +232,10 @@ El host solo dirige su sala: no juega en ella ni aparece en resultados.
 `GET /sessions/:code/state` devuelve el `RoomEnvelope` de ocho campos, con ranking y tiempos,
 solo para host o jugador registrado con JWT vigente. No registra jugadores, muta la partida ni
 suscribe sockets; usa `Cache-Control: private, no-store`. `GET /sessions/:id` conserva SessionState.
+`GET /sessions/history` lista las partidas `FINISHED` del anfitrión (ganador, puntos, aciertos,
+errores y clasificación), sin incluir salas ajenas ni partidas aún abiertas.
+`GET /sessions/played` lista las partidas `FINISHED` en las que el usuario participó, con su puesto,
+puntaje y si acertó cada pregunta. Solo el profesor puede crear cuestionarios (`POST /quizzes`).
 `room:join` y join REST recuperan al mismo participante también en FINISHED, sin otra reserva ni puntos.
 
 El [contrato, runbook de reinicio, catálogo de métricas y guía de demostración](docs/session-recovery-and-telemetry.md)

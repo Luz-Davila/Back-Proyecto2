@@ -69,6 +69,67 @@ export const SESSION_STATE_SCHEMA = object({
   },
 });
 
+export const SESSION_HISTORY_ITEM_SCHEMA = object({
+  id: uuid,
+  code: text,
+  quizTitle: text,
+  finishedAt: date,
+  participantCount: integer,
+  questionsCount: integer,
+  winnerDisplayName: { type: 'string', nullable: true },
+  winnerScore: { type: 'integer', nullable: true },
+  correctCount: integer,
+  wrongCount: integer,
+  unansweredCount: integer,
+  ranking: {
+    type: 'array',
+    items: object({
+      participantId: uuid,
+      displayName: text,
+      totalScore: integer,
+      rank: integer,
+    }),
+  },
+  questions: {
+    type: 'array',
+    items: object({
+      position: integer,
+      statement: text,
+      correctBoolean: { type: 'boolean' },
+      correctCount: integer,
+      wrongCount: integer,
+      unansweredCount: integer,
+      correctNames: { type: 'array', items: text },
+      wrongNames: { type: 'array', items: text },
+      unansweredNames: { type: 'array', items: text },
+    }),
+  },
+});
+
+export const PLAYED_SESSION_ITEM_SCHEMA = object({
+  id: uuid,
+  code: text,
+  quizTitle: text,
+  finishedAt: date,
+  questionsCount: integer,
+  participantCount: integer,
+  rank: { type: 'integer', nullable: true },
+  totalScore: integer,
+  correctCount: integer,
+  wrongCount: integer,
+  unansweredCount: integer,
+  winnerDisplayName: { type: 'string', nullable: true },
+  questions: {
+    type: 'array',
+    items: object({
+      position: integer,
+      statement: text,
+      correctBoolean: { type: 'boolean' },
+      myChoice: { type: 'boolean', nullable: true },
+    }),
+  },
+});
+
 export const JOIN_SESSION_SCHEMA = object({
   participant: PARTICIPANT_SCHEMA,
   session: SESSION_STATE_SCHEMA,

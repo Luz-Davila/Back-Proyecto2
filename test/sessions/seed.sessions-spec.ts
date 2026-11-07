@@ -81,14 +81,20 @@ describe('Regresión del seed contra PostgreSQL local y Auth/Storage simulados',
       (SELECT count(*)::int FROM quizzes) AS quizzes,
       (SELECT count(*)::int FROM questions) AS questions,
       (SELECT count(*)::int FROM questions WHERE "imageKey" IS NOT NULL) AS images,
+      (SELECT count(*)::int FROM game_sessions) AS sessions,
+      (SELECT count(*)::int FROM game_results) AS results,
       (SELECT id FROM quizzes LIMIT 1) AS "quizId"`);
-    expect((await run()).stdout).toContain('5 preguntas');
+    const firstRun = (await run()).stdout;
+    expect(firstRun).toContain('5 preguntas');
+    expect(firstRun).toContain('Historial demo: PAST23, BEST42');
     const first = await snapshot();
     expect(first[0]).toMatchObject({
-      profiles: 1,
+      profiles: 5,
       quizzes: 1,
       questions: 5,
       images: 1,
+      sessions: 6,
+      results: 13,
     });
     expect((await run()).stdout).toContain('5 preguntas');
     expect(await snapshot()).toEqual(first);

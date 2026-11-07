@@ -40,7 +40,10 @@ describe('QuizzesService', () => {
       remove: jest.fn(),
     };
 
-    profiles = { getOrCreate: jest.fn().mockResolvedValue({ userId: OWNER.id }) };
+    profiles = {
+      getOrCreate: jest.fn().mockResolvedValue({ userId: OWNER.id, role: 'teacher' }),
+      requireTeacher: jest.fn().mockResolvedValue({ userId: OWNER.id, role: 'teacher' }),
+    };
     storage = { signedUrl: jest.fn(async (key: string) => `https://storage.test/${key}`) };
     service = new QuizzesService(
       repository as unknown as Repository<Quiz>,
@@ -62,7 +65,7 @@ describe('QuizzesService', () => {
   it('crea el cuestionario con el dueño del token', async () => {
     await service.create(OWNER, { title: 'Quiz de prueba' });
 
-    expect(profiles.getOrCreate).toHaveBeenCalledWith(OWNER);
+    expect(profiles.requireTeacher).toHaveBeenCalledWith(OWNER);
     expect(repository.save).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: OWNER.id, title: 'Quiz de prueba' }),
     );

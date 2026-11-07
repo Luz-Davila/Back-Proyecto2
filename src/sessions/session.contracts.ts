@@ -105,3 +105,65 @@ export interface JoinSessionResult {
   participant: ParticipantView;
   session: SessionState;
 }
+
+export const SESSION_HISTORY_LIMIT = 50;
+
+export interface SessionHistoryRankingRow {
+  participantId: string;
+  displayName: string;
+  totalScore: number;
+  rank: number;
+}
+
+export interface SessionHistoryQuestionStat {
+  position: number;
+  statement: string;
+  correctBoolean: boolean;
+  correctCount: number;
+  wrongCount: number;
+  unansweredCount: number;
+  correctNames: string[];
+  wrongNames: string[];
+  unansweredNames: string[];
+}
+
+export interface PlayedQuestion {
+  position: number;
+  statement: string;
+  correctBoolean: boolean;
+  myChoice: boolean | null;
+}
+
+/** Partida finalizada en la que el usuario autenticado participó. */
+export interface PlayedSessionItem {
+  id: string;
+  code: string;
+  quizTitle: string;
+  finishedAt: string;
+  questionsCount: number;
+  participantCount: number;
+  rank: number | null;
+  totalScore: number;
+  correctCount: number;
+  wrongCount: number;
+  unansweredCount: number;
+  winnerDisplayName: string | null;
+  questions: PlayedQuestion[];
+}
+
+/** Resumen de una partida finalizada para el anfitrión. */
+export interface SessionHistoryItem {
+  id: string;
+  code: string;
+  quizTitle: string;
+  finishedAt: string;
+  participantCount: number;
+  questionsCount: number;
+  winnerDisplayName: string | null;
+  winnerScore: number | null;
+  correctCount: number;
+  wrongCount: number;
+  unansweredCount: number;
+  ranking: SessionHistoryRankingRow[];
+  questions: SessionHistoryQuestionStat[];
+}
