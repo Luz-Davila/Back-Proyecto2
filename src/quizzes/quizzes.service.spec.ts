@@ -93,6 +93,20 @@ describe('QuizzesService', () => {
     await expect(service.findOne(OTHER, QUIZ_ID)).rejects.toThrow(NotFoundException);
   });
 
+  it('minimiza el contexto para IA sin IDs, URLs, campos desconocidos ni firma de imágenes', async () => {
+    repository.findOne.mockResolvedValue({ ...quizOf(OWNER.id), questions: Array.from({ length: 31 }, () => ({
+      id: 'privado', statement: 'Afirmación', correctBoolean: true, imageKey: 'interno', unexpected: 'no enviar',
+    })) });
+    const context = await service.assistantContext(OWNER, QUIZ_ID);
+    expect(context.questions).toHaveLength(30);
+    expect(context.truncated).toBe(true);
+    expect(context.questionsCount).toBe(31);
+    expect(Object.keys(context.questions[0]).sort()).toEqual(['correctBoolean', 'statement']);
+    expect(JSON.stringify(context)).not.toContain('privado');
+    expect(JSON.stringify(context)).not.toContain('interno');
+    expect(storage.signedUrl).not.toHaveBeenCalled();
+  });
+
   it('responde 404 al leer un cuestionario inexistente', async () => {
     repository.findOne.mockResolvedValue(null);
 

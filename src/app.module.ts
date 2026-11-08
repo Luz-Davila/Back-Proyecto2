@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
@@ -23,6 +24,7 @@ import { TelemetryLifecycle } from './telemetry-lifecycle';
     HealthModule,
     ProfilesModule,
     QuizzesModule,
+    ChatbotModule,
     SessionsModule,
   ],
   controllers: [AppController],

@@ -125,7 +125,9 @@ export async function createLocalGameHarness() {
     if (closed || child)
       throw new Error('El harness está cerrado o ya tiene un proceso');
     const spawned = fork(join(__dirname, 'local-game-child.ts'), [], {
-      execArgv: ['-r', 'ts-node/register'],
+      // Los tipos se comprueban en build/Jest. No consumir el plazo real de
+      // revisión (15 s) repitiendo el typecheck completo en cada reinicio.
+      execArgv: ['-r', 'ts-node/register/transpile-only'],
       env: {
         ...process.env,
         OTEL_EXPORTER_OTLP_ENDPOINT: '',

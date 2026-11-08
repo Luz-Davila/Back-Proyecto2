@@ -22,6 +22,7 @@
     "test:sessions": "jest --config ./test/jest-sessions.json --runInBand",
     "test:sockets": "jest --config ./test/jest-sockets.json --runInBand",
     "demo:sessions": "ts-node test/demo-sessions.ts",
+    "demo:chatbot": "ts-node test/demo-chatbot.ts",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",

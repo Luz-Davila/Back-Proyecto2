@@ -105,6 +105,9 @@ describe('Métricas de juego con receptor local', () => {
     expect(
       TELEMETRY_PRIVACY['@opentelemetry/instrumentation-http'].enabled,
     ).toBe(false);
+    expect(
+      TELEMETRY_PRIVACY['@opentelemetry/instrumentation-undici'].enabled,
+    ).toBe(false);
     expect(TELEMETRY_PRIVACY['@opentelemetry/instrumentation-pg'].enabled).toBe(
       false,
     );

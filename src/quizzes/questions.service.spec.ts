@@ -23,6 +23,10 @@ class FakeQuestionStore {
     return null;
   }
 
+  async findOneBy({ id }: { id: string }): Promise<Question | null> {
+    return this.rows.find((row) => row.id === id) ?? null;
+  }
+
   create(value: Partial<Question>): Question {
     return { ...value, id: `pregunta-${this.nextId++}` } as Question;
   }
@@ -73,7 +77,7 @@ describe('QuestionsService', () => {
 
     const dataSource = {
       transaction: jest.fn((callback: (manager: unknown) => unknown) =>
-        callback({ getRepository: () => store }),
+        callback({ getRepository: () => store, findOne: () => quizzes.findOneBy() }),
       ),
     };
 

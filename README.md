@@ -30,6 +30,9 @@ Copia `.env.example` a `.env` y completa los valores:
 | `OTEL_SERVICE_NAME` | No | Nombre del servicio en la telemetría |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Si se define, se activa la exportación OTLP |
 | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` | Para el seed | Usuario de demostración |
+| `DEEPSEEK_API_KEY` | Solo para chat | Clave privada de DeepSeek; nunca en frontend/logs |
+| `DEEPSEEK_MODEL` | No | Modelo del asistente, por defecto `deepseek-flash` (DeepSeek V4.1 Flash) |
+| `DEEPSEEK_TIMEOUT_MS` | No | Timeout de cada consulta, por defecto 60000; conversación hasta 90 segundos |
 
 Sin la clave de servicio la API funciona, pero las rutas de imágenes responden con error de
 configuración y el seed no puede crear el usuario.
@@ -114,6 +117,38 @@ npm run migration:show
 
 `synchronize` está desactivado: todo cambio de esquema debe pasar por una migración.
 
+### Asistente de cuestionarios
+
+El profesor propietario usa `POST /quizzes/:quizId/chat` con `{ messages, requestedCount?, currentDraft? }`.
+El backend ejecuta herramientas de consulta/propuesta usando servicios internos y devuelve `{ reply, draft }`.
+`draft` contiene `{ questions: [{ statement, correctBoolean }] }` o es `null` si no hay propuesta nueva.
+La conversación no guarda preguntas; la versión editada se aprueba mediante
+`POST /quizzes/:quizId/questions/batch` con `{ operationId, questions }`. El recibo es
+`{ operationId, questions }` con IDs/posiciones reales. Ambas rutas responden 200.
+
+La migración aditiva `1794096000000-AddQuestionBatchOperations` crea únicamente la tabla de recibos
+idempotentes (RLS activado); no modifica preguntas, respuestas ni partidas anteriores. Aplicarla en
+una ventana autorizada antes de usar el guardado por lote. Mantener el mismo UUID y contenido en
+reintentos: el backend reproduce el recibo sin insertar de nuevo; otro contenido con el mismo UUID
+responde 409. El lote se agrega al final en una sola transacción, coordinada con ediciones manuales.
+
+Límites: 1–30 preguntas, enunciados 1–500 caracteres, booleanos reales; historial hasta 40 mensajes de
+2000 caracteres y cuerpo 96 KiB. Cinco turnos/minuto y uno activo por profesor **por instancia**;
+cinco rondas/20 llamadas de herramientas como máximo. Errores: 400/413 datos, 401/403/404 acceso,
+429 cuota, 502 proveedor, 503 configuración ausente y 504 timeout. Sin clave, el editor manual y las
+partidas funcionan igual. No se guarda historial conversacional y la IA puede equivocarse.
+
+Las unitarias simulan DeepSeek. Prueba real opcional, con consumo de saldo, contexto artificial y
+**sin escrituras de BD** (no imprime claves ni el contenido generado):
+
+```bash
+npm run demo:chatbot -- --live
+npm run demo:chatbot -- --live --refinement
+```
+
+El código de chat se divide en DTOs, prompt, cliente proveedor, catálogo/ejecutor, orquestador y control
+de cuotas bajo `src/chatbot/`; la persistencia del lote permanece en `src/quizzes/`.
+
 ### Migración del motor de sesiones
 
 `1793158800000-AddSessionLifecycle` agrega duración, cierre/revisión y reservas de jugadores; no modifica
@@ -161,6 +196,8 @@ adelante o acordar una intervención explícita; no prometer rollback destructiv
 | PATCH | `/quizzes/:id` | Edita un cuestionario propio |
 | DELETE | `/quizzes/:id` | Elimina un cuestionario propio |
 | POST | `/quizzes/:quizId/questions` | Agrega una pregunta |
+| POST | `/quizzes/:quizId/chat` | Prepara una propuesta V/F sin guardar |
+| POST | `/quizzes/:quizId/questions/batch` | Guarda preguntas aprobadas de forma atómica e idempotente |
 | PATCH | `/questions/:id` | Edita enunciado, respuesta o posición |
 | DELETE | `/questions/:id` | Elimina una pregunta |
 | PUT | `/questions/:id/image` | Carga o reemplaza la imagen (multipart, campo `file`) |

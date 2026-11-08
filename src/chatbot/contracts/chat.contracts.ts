@@ -1,0 +1,27 @@
+import type { QuestionDraftDto } from '../../quizzes/dto/question-draft.dto';
+
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+}
+
+export interface ModelMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+}
+
+export interface QuizContext {
+  title: string;
+  description: string | null;
+  questionsCount: number;
+  truncated: boolean;
+  questions: { statement: string; correctBoolean: boolean }[];
+}
+
+export interface ChatResponse {
+  reply: string;
+  draft: QuestionDraftDto | null;
+}

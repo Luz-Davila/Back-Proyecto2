@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.service';
@@ -10,7 +14,9 @@ import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
 
 export type QuestionWithImage = Question & { imageUrl: string | null };
-export type QuizDetail = Omit<Quiz, 'questions'> & { questions: QuestionWithImage[] };
+export type QuizDetail = Omit<Quiz, 'questions'> & {
+  questions: QuestionWithImage[];
+};
 
 const SIGNED_URL_SECONDS = 600;
 
@@ -67,7 +73,33 @@ export class QuizzesService {
     return { ...quiz, questions };
   }
 
-  async update(user: AuthenticatedUser, id: string, dto: UpdateQuizDto): Promise<Quiz> {
+  /** Frontera allow-list para la IA; nunca firmar ni enviar imágenes/IDs. */
+  async assistantContext(user: AuthenticatedUser, id: string) {
+    const quiz = await this.quizzes.findOne({
+      where: { id, ownerId: user.id },
+      relations: ['questions'],
+      order: { questions: { position: 'ASC' } },
+    });
+    if (!quiz) throw new NotFoundException('Cuestionario no encontrado');
+    return {
+      title: quiz.title,
+      description: quiz.description,
+      questionsCount: quiz.questions.length,
+      truncated: quiz.questions.length > 30,
+      questions: quiz.questions
+        .slice(0, 30)
+        .map(({ statement, correctBoolean }) => ({
+          statement,
+          correctBoolean,
+        })),
+    };
+  }
+
+  async update(
+    user: AuthenticatedUser,
+    id: string,
+    dto: UpdateQuizDto,
+  ): Promise<Quiz> {
     const quiz = await this.findOneForWrite(user, id);
 
     if (dto.title !== undefined) {
@@ -85,14 +117,19 @@ export class QuizzesService {
     await this.quizzes.remove(quiz);
   }
 
-  private async findOneForWrite(user: AuthenticatedUser, id: string): Promise<Quiz> {
+  private async findOneForWrite(
+    user: AuthenticatedUser,
+    id: string,
+  ): Promise<Quiz> {
     const quiz = await this.quizzes.findOneBy({ id });
 
     if (!quiz) {
       throw new NotFoundException('Cuestionario no encontrado');
     }
     if (quiz.ownerId !== user.id) {
-      throw new ForbiddenException('No puedes modificar un cuestionario de otro usuario');
+      throw new ForbiddenException(
+        'No puedes modificar un cuestionario de otro usuario',
+      );
     }
 
     return quiz;

@@ -11,6 +11,7 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
+import { lockQuizForWrite } from './quiz-write-coordinator';
 
 @Injectable()
 export class QuestionsService {
@@ -30,6 +31,7 @@ export class QuestionsService {
     await this.assertQuizOwned(user, quizId);
 
     return this.dataSource.transaction(async (manager) => {
+      await lockQuizForWrite(manager, user, quizId);
       const repository = manager.getRepository(Question);
       const current = await repository.find({
         where: { quizId },
@@ -39,7 +41,9 @@ export class QuestionsService {
 
       const target = dto.position ?? current.length;
       if (target > current.length) {
-        throw new BadRequestException(`La posición máxima es ${current.length}`);
+        throw new BadRequestException(
+          `La posición máxima es ${current.length}`,
+        );
       }
 
       const created = await repository.save(
@@ -66,10 +70,13 @@ export class QuestionsService {
     questionId: string,
     dto: UpdateQuestionDto,
   ): Promise<Question> {
-    const question = await this.findOwned(user, questionId);
+    const original = await this.findOwned(user, questionId);
 
     return this.dataSource.transaction(async (manager) => {
+      await lockQuizForWrite(manager, user, original.quizId);
       const repository = manager.getRepository(Question);
+      const question = await repository.findOneBy({ id: questionId });
+      if (!question) throw new NotFoundException('Pregunta no encontrada');
 
       if (dto.statement !== undefined) {
         question.statement = dto.statement;
@@ -80,7 +87,12 @@ export class QuestionsService {
       await repository.save(question);
 
       if (dto.position !== undefined) {
-        await this.moveTo(repository, question.quizId, question.id, dto.position);
+        await this.moveTo(
+          repository,
+          question.quizId,
+          question.id,
+          dto.position,
+        );
         question.position = dto.position;
       }
 
@@ -89,10 +101,13 @@ export class QuestionsService {
   }
 
   async remove(user: AuthenticatedUser, questionId: string): Promise<void> {
-    const question = await this.findOwned(user, questionId);
+    const original = await this.findOwned(user, questionId);
 
     await this.dataSource.transaction(async (manager) => {
+      await lockQuizForWrite(manager, user, original.quizId);
       const repository = manager.getRepository(Question);
+      const question = await repository.findOneBy({ id: questionId });
+      if (!question) throw new NotFoundException('Pregunta no encontrada');
       await repository.remove(question);
 
       const remaining = await repository.find({
@@ -120,10 +135,14 @@ export class QuestionsService {
     });
 
     if (target >= current.length) {
-      throw new BadRequestException(`La posición máxima es ${current.length - 1}`);
+      throw new BadRequestException(
+        `La posición máxima es ${current.length - 1}`,
+      );
     }
 
-    const ids = current.map((question) => question.id).filter((id) => id !== questionId);
+    const ids = current
+      .map((question) => question.id)
+      .filter((id) => id !== questionId);
     ids.splice(target, 0, questionId);
     await this.applyOrder(repository, ids);
   }
@@ -132,7 +151,10 @@ export class QuestionsService {
    * La base exige posiciones únicas por quiz, así que primero se mueven todas
    * las preguntas a posiciones negativas y luego se asignan las definitivas.
    */
-  private async applyOrder(repository: Repository<Question>, ids: string[]): Promise<void> {
+  private async applyOrder(
+    repository: Repository<Question>,
+    ids: string[],
+  ): Promise<void> {
     for (let index = 0; index < ids.length; index += 1) {
       await repository.update({ id: ids[index] }, { position: -(index + 1) });
     }
@@ -141,21 +163,29 @@ export class QuestionsService {
     }
   }
 
-  private async assertQuizOwned(user: AuthenticatedUser, quizId: string): Promise<void> {
+  private async assertQuizOwned(
+    user: AuthenticatedUser,
+    quizId: string,
+  ): Promise<void> {
     const quiz = await this.quizzes.findOneBy({ id: quizId });
 
     if (!quiz) {
       throw new NotFoundException('Cuestionario no encontrado');
     }
     if (quiz.ownerId !== user.id) {
-      throw new ForbiddenException('No puedes modificar preguntas de otro usuario');
+      throw new ForbiddenException(
+        'No puedes modificar preguntas de otro usuario',
+      );
     }
   }
 
   /**
    * Devuelve la pregunta con su quiz solo si el usuario es el dueño.
    */
-  async findOwned(user: AuthenticatedUser, questionId: string): Promise<Question> {
+  async findOwned(
+    user: AuthenticatedUser,
+    questionId: string,
+  ): Promise<Question> {
     const question = await this.questions.findOne({
       where: { id: questionId },
       relations: ['quiz'],
@@ -165,13 +195,18 @@ export class QuestionsService {
       throw new NotFoundException('Pregunta no encontrada');
     }
     if (question.quiz.ownerId !== user.id) {
-      throw new ForbiddenException('No puedes modificar preguntas de otro usuario');
+      throw new ForbiddenException(
+        'No puedes modificar preguntas de otro usuario',
+      );
     }
 
     return question;
   }
 
-  async updateImageKey(questionId: string, imageKey: string | null): Promise<void> {
+  async updateImageKey(
+    questionId: string,
+    imageKey: string | null,
+  ): Promise<void> {
     await this.questions.update({ id: questionId }, { imageKey });
   }
 }
