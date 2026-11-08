@@ -1,0 +1,28 @@
+# Dependencias y compilados locales: Docker los reconstruye.
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+
+# Secretos y configuracion local.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Archivos de Git y del editor.
+.git
+.gitignore
+.vscode
+.idea
+
+# Archivos temporales y logs.
+*.log
+npm-debug.log*
+.DS_Store
+
+# Evitar subir material de pruebas no necesario al build.
+*.tsbuildinfo
