@@ -329,6 +329,7 @@ describe('Gateway real: salas, permisos y preguntas seguras', () => {
       (event) => event.event === 'question:closed',
     )!.room;
     expect(closed.state.phase).toBe('REVIEW');
+    expect(closed.remainingMs).toBe(5_000);
     expect(closed.state.currentQuestion).toHaveProperty('correctBoolean', true);
     expect(
       Date.parse(closed.state.currentQuestion!.reviewEndsAt!) -

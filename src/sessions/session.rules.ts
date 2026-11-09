@@ -10,6 +10,10 @@ import {
 import type { ProcessSessionDeadlineCommand } from './session.contracts';
 import { SessionError } from './session.error';
 
+function deadlineTime(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : Date.parse(String(value));
+}
+
 function requireHost(aggregate: SessionAggregate, actorId: string): void {
   if (aggregate.session.hostId !== actorId)
     throw new SessionError('HOST_REQUIRED');
@@ -26,6 +30,10 @@ function currentQuestion(aggregate: SessionAggregate): SessionQuestion {
   );
   if (!question) throw new SessionError('INVALID_SESSION_STATE');
   return question;
+}
+
+function answerWindowSeconds(aggregate: SessionAggregate, question: SessionQuestion): number {
+  return question.durationSeconds ?? aggregate.session.questionDurationSeconds;
 }
 
 function open(question: SessionQuestion, now: Date, seconds: number): void {
@@ -65,7 +73,7 @@ export function startSession(
   if (!first) throw new SessionError('SESSION_HAS_NO_QUESTIONS');
   if (players(aggregate).length === 0)
     throw new SessionError('SESSION_HAS_NO_PARTICIPANTS');
-  open(first, now, aggregate.session.questionDurationSeconds);
+  open(first, now, answerWindowSeconds(aggregate, first));
   aggregate.session.status = 'IN_PROGRESS';
   aggregate.session.startedAt = new Date(now);
   aggregate.session.currentIndex = 0;
@@ -126,7 +134,7 @@ export function advanceSession(
     finish(aggregate, now);
     return;
   }
-  open(next, now, aggregate.session.questionDurationSeconds);
+  open(next, now, answerWindowSeconds(aggregate, next));
   aggregate.session.currentIndex = next.position;
 }
 
@@ -185,10 +193,12 @@ export function processSessionDeadline(
   const deadline =
     command.kind === 'ANSWER' ? question.closesAt : question.reviewEndsAt;
   const expectedStatus = command.kind === 'ANSWER' ? 'OPEN' : 'CLOSED';
+  const expectedAt = deadlineTime(command.expectedDeadline);
   if (
     question.status !== expectedStatus ||
     !deadline ||
-    deadline.getTime() !== command.expectedDeadline.getTime() ||
+    !Number.isFinite(expectedAt) ||
+    deadline.getTime() !== expectedAt ||
     now < deadline
   )
     return false;

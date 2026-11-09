@@ -3,7 +3,7 @@ import {
   OnModuleDestroy,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { Socket } from 'socket.io';
+import type { Namespace, Socket } from 'socket.io';
 import {
   SessionNotifications,
   type CommittedSession,
@@ -19,11 +19,16 @@ export class SessionRealtimeHub
     Socket,
     { userId: string; sessions: Set<string> }
   >();
+  private nsp?: Namespace;
 
   constructor(
     private readonly auth: SessionSocketAuthService,
     private readonly notifications: SessionNotifications,
   ) {}
+
+  bind(namespace: Namespace): void {
+    this.nsp = namespace;
+  }
 
   async subscribe(socket: Socket, sessionId: string): Promise<void> {
     if (!this.auth.canSend(socket)) throw new UnauthorizedException();
@@ -60,24 +65,31 @@ export class SessionRealtimeHub
           sub.sessions.has(sessionId) && this.auth.canSend(socket),
       )
       .map(([socket]) => socket);
-    if (!recipients.length) return;
+    const room = `session:${sessionId}`;
+    if (!this.nsp && !recipients.length) return;
     committed.notificationStage = 'projection';
     const envelope = await this.notifications.envelope(committed);
     committed.notificationStage = 'delivery';
-    for (const socket of recipients) {
-      if (!this.auth.canSend(socket)) continue;
-      socket.emit('room:state', envelope);
-      if (committed.event && committed.event !== 'game:finished')
-        socket.emit(committed.event, envelope);
-      if (committed.scoreboardUpdated)
-        socket.emit('scoreboard:updated', envelope);
-      if (committed.event === 'game:finished')
-        socket.emit('game:finished', envelope);
-    }
+    const emit = (event: string) => {
+      if (this.nsp) {
+        this.nsp.to(room).emit(event, envelope);
+        return;
+      }
+      for (const socket of recipients) {
+        if (!this.auth.canSend(socket)) continue;
+        socket.emit(event, envelope);
+      }
+    };
+    emit('room:state');
+    if (committed.event && committed.event !== 'game:finished')
+      emit(committed.event);
+    if (committed.scoreboardUpdated) emit('scoreboard:updated');
+    if (committed.event === 'game:finished') emit('game:finished');
   }
 
   onModuleDestroy(): void {
     this.notifications.detach();
     this.subscriptions.clear();
+    this.nsp = undefined;
   }
 }

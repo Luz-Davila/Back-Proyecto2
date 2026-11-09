@@ -43,6 +43,8 @@ export class SessionStateProjector {
         id: current.id,
         position: current.position,
         statement: current.statement,
+        kind: current.kind ?? 'boolean',
+        options: current.kind === 'multiple' ? (current.options ?? null) : null,
         imageUrl: current.imageKey
           ? await this.storage.signedUrl(current.imageKey, 600, signal)
           : null,
@@ -55,10 +57,11 @@ export class SessionStateProjector {
         current.status === 'CLOSED'
           ? {
               ...fields,
-              status: 'CLOSED',
+              status: 'CLOSED' as const,
               correctBoolean: current.correctBoolean,
+              correctIndexes: current.correctIndexes ?? null,
             }
-          : { ...fields, status: 'OPEN' };
+          : { ...fields, status: 'OPEN' as const };
     }
     return {
       id: session.id,

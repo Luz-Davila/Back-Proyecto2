@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
+import { isCorrectAnswer } from '../quizzes/question-kind';
 import { ActiveSessionMembership } from './active-session-membership.entity';
 import { Answer } from './answer.entity';
 import { GameResult } from './game-result.entity';
@@ -250,8 +251,9 @@ export class SessionsRepository {
       sessionId: row.sessionId,
       expectedQuestionId: row.expectedQuestionId,
       kind: row.status === 'OPEN' ? 'ANSWER' : 'REVIEW',
-      expectedDeadline:
+      expectedDeadline: new Date(
         row.status === 'OPEN' ? row.closesAt : row.reviewEndsAt!,
+      ),
     }));
   }
 }
@@ -361,11 +363,19 @@ function toPlayedItem(
   );
   const playedQuestions: PlayedQuestion[] = sessionQuestions.map((question) => {
     const mine = mineAnswers.get(question.id) ?? null;
+    const multiple = (question.kind ?? 'boolean') === 'multiple';
     return {
       position: question.position,
       statement: question.statement,
+      kind: question.kind ?? 'boolean',
+      options: question.options ?? null,
       correctBoolean: question.correctBoolean,
-      myChoice: mine ? mine.choice : null,
+      correctIndexes: question.correctIndexes ?? null,
+      myChoice: mine
+        ? multiple
+          ? (mine.choiceIndex ?? null)
+          : (mine.choice ?? null)
+        : null,
     };
   });
   const ranking = results
@@ -376,15 +386,11 @@ function toPlayedItem(
       ? null
       : (ranking.find((result) => result.participantId === me.id) ?? null);
   const winner = ranking.find((row) => row.rank === 1) ?? null;
-  const correctCount = playedQuestions.filter(
-    (question) =>
-      question.myChoice !== null &&
-      question.myChoice === question.correctBoolean,
+  const correctCount = playedQuestions.filter((question) =>
+    playedChoiceIsCorrect(question),
   ).length;
   const wrongCount = playedQuestions.filter(
-    (question) =>
-      question.myChoice !== null &&
-      question.myChoice !== question.correctBoolean,
+    (question) => question.myChoice !== null && !playedChoiceIsCorrect(question),
   ).length;
   return {
     id: session.id,
@@ -416,7 +422,7 @@ function questionStat(
   const wrongNames: string[] = [];
   for (const answer of answers) {
     const name = names.get(answer.participantId) ?? 'Participante';
-    if (answer.choice === question.correctBoolean) correctNames.push(name);
+    if (isCorrectAnswer(question, answer)) correctNames.push(name);
     else wrongNames.push(name);
   }
   const unansweredNames = participants
@@ -428,7 +434,10 @@ function questionStat(
   return {
     position: question.position,
     statement: question.statement,
+    kind: question.kind ?? 'boolean',
+    options: question.options ?? null,
     correctBoolean: question.correctBoolean,
+    correctIndexes: question.correctIndexes ?? null,
     correctCount: correctNames.length,
     wrongCount: wrongNames.length,
     unansweredCount: unansweredNames.length,
@@ -436,4 +445,12 @@ function questionStat(
     wrongNames,
     unansweredNames,
   };
+}
+
+function playedChoiceIsCorrect(question: PlayedQuestion): boolean {
+  if (question.myChoice === null) return false;
+  if (question.kind === 'multiple') {
+    return typeof question.myChoice === 'number' && (question.correctIndexes ?? []).includes(question.myChoice);
+  }
+  return question.myChoice === question.correctBoolean;
 }

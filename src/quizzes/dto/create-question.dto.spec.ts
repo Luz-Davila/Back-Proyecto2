@@ -35,6 +35,42 @@ describe('CreateQuestionDto', () => {
     ]);
   });
 
+  it('acepta una pregunta de 4 opciones', async () => {
+    await expect(
+      errorsFor({
+        statement: '¿Cuál es un planeta?',
+        kind: 'multiple',
+        options: ['Sol', 'Luna', 'Tierra', 'Plutón'],
+        correctIndexes: [0, 2],
+      }),
+    ).resolves.toEqual([]);
+  });
+
+  it('rechaza opción múltiple sin índice correcto', async () => {
+    await expect(
+      errorsFor({
+        statement: '¿Cuál es un planeta?',
+        kind: 'multiple',
+        options: ['Sol', 'Luna', 'Tierra', 'Plutón'],
+      }),
+    ).resolves.toEqual(['correctIndexes']);
+  });
+
+  it('acepta un tiempo propio entre 5 y 120 segundos', async () => {
+    await expect(
+      errorsFor({ statement: 'Enunciado', correctBoolean: true, durationSeconds: 20 }),
+    ).resolves.toEqual([]);
+  });
+
+  it('rechaza un tiempo de pregunta fuera de rango', async () => {
+    await expect(
+      errorsFor({ statement: 'Enunciado', correctBoolean: true, durationSeconds: 4 }),
+    ).resolves.toEqual(['durationSeconds']);
+    await expect(
+      errorsFor({ statement: 'Enunciado', correctBoolean: true, durationSeconds: 121 }),
+    ).resolves.toEqual(['durationSeconds']);
+  });
+
   it('rechaza una posición negativa o decimal', async () => {
     await expect(errorsFor({ statement: 'Enunciado', correctBoolean: true, position: -1 })).resolves.toEqual(
       ['position'],

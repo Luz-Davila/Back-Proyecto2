@@ -64,6 +64,7 @@ export class SessionsGateway
   ) {}
 
   afterInit(namespace: Namespace): void {
+    this.hub.bind(namespace);
     this.notifications.attach(this.hub);
     namespace.use((socket, next) => {
       void this.auth.connect(socket).then(

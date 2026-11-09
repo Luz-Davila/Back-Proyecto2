@@ -59,7 +59,11 @@ class FakeQuestionStore {
         quizId: QUIZ_ID,
         statement: `Enunciado ${index}`,
         correctBoolean: true,
+        kind: 'boolean',
+        options: null,
+        correctIndexes: null,
         imageKey: null,
+        durationSeconds: null,
         position: index,
       } as Question);
     }
@@ -115,6 +119,19 @@ describe('QuestionsService', () => {
     expect(created.position).toBe(2);
     expect(positions()).toEqual([0, 1, 2]);
     expect(store.rows.at(-1)?.statement).toBe('El cielo es azul');
+  });
+
+  it('guarda una pregunta de opción múltiple con 4 respuestas', async () => {
+    const created = await service.create(OWNER, QUIZ_ID, {
+      statement: 'Capital de Francia',
+      kind: 'multiple',
+      options: ['Madrid', 'París', 'Roma', 'Lisboa'],
+      correctIndexes: [1, 3],
+    });
+
+    expect(created.kind).toBe('multiple');
+    expect(created.options).toEqual(['Madrid', 'París', 'Roma', 'Lisboa']);
+    expect(created.correctIndexes).toEqual([1, 3]);
   });
 
   it('inserta la pregunta en la posición indicada y renumera el resto', async () => {

@@ -31,6 +31,9 @@ export class Quiz {
   @Column({ type: 'varchar', length: 500, nullable: true })
   description: string | null;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  imageKey: string | null;
+
   @OneToMany(() => Question, (question) => question.quiz)
   questions: Question[];
 

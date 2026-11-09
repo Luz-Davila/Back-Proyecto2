@@ -78,6 +78,7 @@ export function createSessionFixture(
         statement: `Pregunta ${position + 1}`,
         correctBoolean,
         imageKey: null,
+        durationSeconds: null,
         status: 'PENDING',
         openedAt: null,
         closesAt: null,

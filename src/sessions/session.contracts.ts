@@ -1,3 +1,4 @@
+import type { QuestionKind } from '../quizzes/question-kind';
 import type { SessionStatus } from './game-session.entity';
 
 export const MIN_QUESTION_DURATION_SECONDS = 5;
@@ -24,7 +25,8 @@ export interface CreateSessionInput {
 
 export interface SubmitAnswerInput {
   sessionQuestionId: string;
-  choice: boolean;
+  choice?: boolean;
+  choiceIndex?: number;
 }
 
 export interface AnswerReceipt extends SubmitAnswerInput {
@@ -67,6 +69,8 @@ interface CurrentQuestionFields {
   id: string;
   position: number;
   statement: string;
+  kind: QuestionKind;
+  options: string[] | null;
   imageUrl: string | null;
   openedAt: string;
   closesAt: string;
@@ -75,7 +79,10 @@ interface CurrentQuestionFields {
 }
 
 export type CurrentQuestionView = CurrentQuestionFields &
-  ({ status: 'OPEN' } | { status: 'CLOSED'; correctBoolean: boolean });
+  (
+    | { status: 'OPEN' }
+    | { status: 'CLOSED'; correctBoolean: boolean; correctIndexes: number[] | null }
+  );
 
 export interface SessionResultView {
   participantId: string;
@@ -118,7 +125,10 @@ export interface SessionHistoryRankingRow {
 export interface SessionHistoryQuestionStat {
   position: number;
   statement: string;
+  kind: QuestionKind;
+  options: string[] | null;
   correctBoolean: boolean;
+  correctIndexes: number[] | null;
   correctCount: number;
   wrongCount: number;
   unansweredCount: number;
@@ -130,8 +140,11 @@ export interface SessionHistoryQuestionStat {
 export interface PlayedQuestion {
   position: number;
   statement: string;
+  kind: QuestionKind;
+  options: string[] | null;
   correctBoolean: boolean;
-  myChoice: boolean | null;
+  correctIndexes: number[] | null;
+  myChoice: boolean | number | null;
 }
 
 /** Partida finalizada en la que el usuario autenticado participó. */

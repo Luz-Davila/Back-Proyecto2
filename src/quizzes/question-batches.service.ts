@@ -57,9 +57,13 @@ export class QuestionBatchesService {
           Question,
           manager.create(Question, {
             ...value,
+            kind: 'boolean',
+            options: null,
+            correctIndexes: null,
             quizId,
             position: offset + index,
             imageKey: null,
+            durationSeconds: null,
           }),
         );
         receipt.questions.push({

@@ -4,6 +4,7 @@ import type { QuizzesService } from '../quizzes/quizzes.service';
 import type { DeepSeekClient } from './providers/deepseek.client';
 import { ChatLimitsService } from './chat-limits.service';
 import type { ChatOrchestrator } from './chat-orchestrator.service';
+import { chatError } from './chat.errors';
 import { QuizChatService } from './quiz-chat.service';
 
 describe('Acceso y aislamiento de QuizChatService', () => {
@@ -62,6 +63,27 @@ describe('Acceso y aislamiento de QuizChatService', () => {
       'conversación es demasiado larga',
     );
     expect(orchestrator.respond).not.toHaveBeenCalled();
+  });
+
+  it('usa el asistente local si DeepSeek no está configurado', async () => {
+    provider.assertConfigured.mockImplementation(() => {
+      throw chatError(
+        503,
+        'CHAT_NOT_CONFIGURED',
+        'El asistente no está configurado',
+      );
+    });
+    const result = await service.respond(user, 'quiz', {
+      messages: [
+        {
+          role: 'user',
+          content: '10 preguntas de fotosíntesis para sexto grado',
+        },
+      ],
+    });
+    expect(orchestrator.respond).not.toHaveBeenCalled();
+    expect(result.draft?.questions).toHaveLength(10);
+    expect(result.reply).toMatch(/fotosíntesis/i);
   });
 
   it('libera el turno incluso cuando falla el proveedor', async () => {

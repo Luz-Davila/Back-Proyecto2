@@ -14,7 +14,9 @@ import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
 
 export type QuestionWithImage = Question & { imageUrl: string | null };
+export type QuizWithImage = Quiz & { imageUrl: string | null };
 export type QuizDetail = Omit<Quiz, 'questions'> & {
+  imageUrl: string | null;
   questions: QuestionWithImage[];
 };
 
@@ -29,13 +31,15 @@ export class QuizzesService {
     private readonly storage: StorageService,
   ) {}
 
-  list(user: AuthenticatedUser): Promise<Quiz[]> {
-    return this.quizzes
+  async list(user: AuthenticatedUser): Promise<Array<QuizWithImage & { questionsCount: number }>> {
+    const quizzes = (await this.quizzes
       .createQueryBuilder('quiz')
       .where('quiz.ownerId = :ownerId', { ownerId: user.id })
       .loadRelationCountAndMap('quiz.questionsCount', 'quiz.questions')
       .orderBy('quiz.updatedAt', 'DESC')
-      .getMany();
+      .getMany()) as Array<Quiz & { questionsCount: number }>;
+
+    return Promise.all(quizzes.map(async (quiz) => ({ ...quiz, imageUrl: await this.signedUrl(quiz.imageKey) })));
   }
 
   async create(user: AuthenticatedUser, dto: CreateQuizDto): Promise<Quiz> {
@@ -45,6 +49,7 @@ export class QuizzesService {
       ownerId: user.id,
       title: dto.title,
       description: dto.description ?? null,
+      imageKey: null,
     });
 
     return this.quizzes.save(quiz);
@@ -70,7 +75,7 @@ export class QuizzesService {
       })),
     );
 
-    return { ...quiz, questions };
+    return { ...quiz, imageUrl: await this.signedUrl(quiz.imageKey), questions };
   }
 
   /** Frontera allow-list para la IA; nunca firmar ni enviar imágenes/IDs. */
@@ -100,7 +105,7 @@ export class QuizzesService {
     id: string,
     dto: UpdateQuizDto,
   ): Promise<Quiz> {
-    const quiz = await this.findOneForWrite(user, id);
+    const quiz = await this.findOwned(user, id);
 
     if (dto.title !== undefined) {
       quiz.title = dto.title;
@@ -113,14 +118,14 @@ export class QuizzesService {
   }
 
   async remove(user: AuthenticatedUser, id: string): Promise<void> {
-    const quiz = await this.findOneForWrite(user, id);
+    const quiz = await this.findOwned(user, id);
+    if (quiz.imageKey) {
+      await this.storage.remove(quiz.imageKey);
+    }
     await this.quizzes.remove(quiz);
   }
 
-  private async findOneForWrite(
-    user: AuthenticatedUser,
-    id: string,
-  ): Promise<Quiz> {
+  async findOwned(user: AuthenticatedUser, id: string): Promise<Quiz> {
     const quiz = await this.quizzes.findOneBy({ id });
 
     if (!quiz) {
@@ -133,5 +138,13 @@ export class QuizzesService {
     }
 
     return quiz;
+  }
+
+  async updateImageKey(quizId: string, imageKey: string | null): Promise<void> {
+    await this.quizzes.update({ id: quizId }, { imageKey });
+  }
+
+  private signedUrl(imageKey: string | null | undefined): Promise<string | null> {
+    return imageKey ? this.storage.signedUrl(imageKey, SIGNED_URL_SECONDS) : Promise.resolve(null);
   }
 }

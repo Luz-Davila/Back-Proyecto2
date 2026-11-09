@@ -29,8 +29,11 @@ export class Answer {
   @JoinColumn({ name: 'participantId' })
   participant: SessionParticipant;
 
-  @Column({ type: 'boolean' })
-  choice: boolean;
+  @Column({ type: 'boolean', nullable: true })
+  choice: boolean | null;
+
+  @Column({ type: 'smallint', nullable: true })
+  choiceIndex: number | null;
 
   @Column({ type: 'timestamptz' })
   answeredAt: Date;

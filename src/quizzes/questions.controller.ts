@@ -32,6 +32,7 @@ const QUESTION_EXAMPLE = {
   statement: 'El sol es una estrella',
   correctBoolean: true,
   imageKey: null,
+  durationSeconds: null,
   position: 0,
   createdAt: '2026-10-25T18:00:00.000Z',
   updatedAt: '2026-10-25T18:00:00.000Z',

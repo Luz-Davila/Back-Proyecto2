@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { QuizzesService } from '../quizzes/quizzes.service';
@@ -8,6 +8,18 @@ import { ChatOrchestrator } from './chat-orchestrator.service';
 import { QuizChatDto } from './dto/quiz-chat.dto';
 import { validateDto } from '../common/validate-dto';
 import { DeepSeekClient } from './providers/deepseek.client';
+import { localQuizRespond } from './providers/local-quiz.assistant';
+
+function isChatNotConfigured(error: unknown) {
+  if (!(error instanceof HttpException)) return false;
+  const body = error.getResponse();
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    'code' in body &&
+    (body as { code: string }).code === 'CHAT_NOT_CONFIGURED'
+  );
+}
 
 @Injectable()
 export class QuizChatService {
@@ -35,7 +47,12 @@ export class QuizChatService {
       );
     await this.profiles.requireTeacher(user);
     const context = await this.quizzes.assistantContext(user, quizId);
-    this.client.assertConfigured();
+    try {
+      this.client.assertConfigured();
+    } catch (error) {
+      if (isChatNotConfigured(error)) return localQuizRespond(request, context);
+      throw error;
+    }
     const release = this.limits.acquire(user.id);
     try {
       return await this.orchestrator.respond(

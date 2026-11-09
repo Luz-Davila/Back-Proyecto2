@@ -7,7 +7,9 @@ export function answerReceipt(answer: Answer): AnswerReceipt {
   return {
     id: answer.id,
     sessionQuestionId: answer.sessionQuestionId,
-    choice: answer.choice,
+    ...(answer.choiceIndex != null
+      ? { choiceIndex: answer.choiceIndex }
+      : { choice: answer.choice ?? false }),
     answeredAt: answer.answeredAt.toISOString(),
   };
 }
@@ -29,7 +31,12 @@ export function authorizeAnswer(
     (a) =>
       a.sessionQuestionId === question.id && a.participantId === participant.id,
   );
-  if (existing && existing.choice !== input.choice)
+  if (
+    existing &&
+    (existing.choiceIndex != null
+      ? existing.choiceIndex !== input.choiceIndex
+      : existing.choice !== input.choice)
+  )
     throw new SessionError('ANSWER_ALREADY_SUBMITTED');
   return { question, participant, existing };
 }

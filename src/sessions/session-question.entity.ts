@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import type { QuestionKind } from '../quizzes/question-kind';
 import { Question } from '../quizzes/question.entity';
 import { GameSession } from './game-session.entity';
 
@@ -16,6 +17,7 @@ export type SessionQuestionStatus = (typeof SESSION_QUESTION_STATUSES)[number];
 @Entity('session_questions')
 @Unique(['sessionId', 'position'])
 @Check(`"status" IN ('PENDING', 'OPEN', 'CLOSED')`)
+@Check(`"durationSeconds" IS NULL OR ("durationSeconds" BETWEEN 5 AND 120)`)
 export class SessionQuestion {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -40,11 +42,23 @@ export class SessionQuestion {
   @Column({ type: 'varchar', length: 500 })
   statement: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'boolean' })
+  kind: QuestionKind;
+
   @Column({ type: 'boolean' })
   correctBoolean: boolean;
 
+  @Column({ type: 'jsonb', nullable: true })
+  options: string[] | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  correctIndexes: number[] | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   imageKey: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  durationSeconds: number | null;
 
   @Column({ type: 'varchar', length: 20, default: 'PENDING' })
   status: SessionQuestionStatus;

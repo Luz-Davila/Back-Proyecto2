@@ -11,6 +11,7 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
+import { resolveCreateQuestion } from './question-kind';
 import { lockQuizForWrite } from './quiz-write-coordinator';
 
 @Injectable()
@@ -46,12 +47,14 @@ export class QuestionsService {
         );
       }
 
+      const content = resolveCreateQuestion(dto);
       const created = await repository.save(
         repository.create({
           quizId,
           statement: dto.statement,
-          correctBoolean: dto.correctBoolean,
+          ...content,
           imageKey: null,
+          durationSeconds: dto.durationSeconds ?? null,
           position: -(current.length + 1),
         }),
       );
@@ -81,8 +84,20 @@ export class QuestionsService {
       if (dto.statement !== undefined) {
         question.statement = dto.statement;
       }
-      if (dto.correctBoolean !== undefined) {
-        question.correctBoolean = dto.correctBoolean;
+      if (dto.kind !== undefined || dto.correctBoolean !== undefined || dto.options !== undefined || dto.correctIndexes !== undefined) {
+        const content = resolveCreateQuestion({
+          kind: dto.kind ?? question.kind,
+          correctBoolean: dto.correctBoolean ?? question.correctBoolean,
+          options: dto.options ?? question.options,
+          correctIndexes: dto.correctIndexes ?? question.correctIndexes,
+        });
+        question.kind = content.kind;
+        question.correctBoolean = content.correctBoolean;
+        question.options = content.options;
+        question.correctIndexes = content.correctIndexes;
+      }
+      if (dto.durationSeconds !== undefined) {
+        question.durationSeconds = dto.durationSeconds;
       }
       await repository.save(question);
 

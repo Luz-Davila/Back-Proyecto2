@@ -70,6 +70,32 @@ describe('Reglas del dominio de sesiones', () => {
     },
   );
 
+  it('usa el tiempo de la pregunta si existe; si no, el de la sala', () => {
+    const f = fixture(30);
+    f.questions[0].durationSeconds = 10;
+    f.questions[1].durationSeconds = null;
+    startSession(f.aggregate, f.host.id, f.clock.now());
+    expect(
+      f.questions[0].closesAt!.getTime() - f.questions[0].openedAt!.getTime(),
+    ).toBe(10_000);
+    f.clock.advance(10_000);
+    processSessionDeadline(
+      f.aggregate,
+      {
+        sessionId: f.session.id,
+        expectedQuestionId: f.questions[0].id,
+        kind: 'ANSWER',
+        expectedDeadline: f.questions[0].closesAt!,
+      },
+      f.clock.now(),
+    );
+    f.clock.advance(5_000);
+    advanceSession(f.aggregate, f.questions[0].id, f.clock.now(), f.host.id);
+    expect(
+      f.questions[1].closesAt!.getTime() - f.questions[1].openedAt!.getTime(),
+    ).toBe(30_000);
+  });
+
   it('no admite avanzar abierta ni acortar la revisión y rechaza avance obsoleto', () => {
     const f = fixture(15);
     startSession(f.aggregate, f.host.id, f.clock.now());

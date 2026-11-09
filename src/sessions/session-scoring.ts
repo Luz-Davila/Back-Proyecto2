@@ -1,3 +1,4 @@
+import { isCorrectAnswer } from '../quizzes/question-kind';
 import type { SessionAggregate } from './session-aggregate';
 import type { SessionQuestion } from './session-question.entity';
 import {
@@ -38,7 +39,7 @@ export function scoreClosedQuestion(
   const answers = acceptedQuestionAnswers(aggregate, question, now);
   const fastCorrect = answers.filter(
     (a) =>
-      a.choice === question.correctBoolean &&
+      isCorrectAnswer(question, a) &&
       a.answeredAt.getTime() - question.openedAt!.getTime() <
         SPEED_BONUS_WINDOW_MS,
   );
@@ -47,7 +48,7 @@ export function scoreClosedQuestion(
     : undefined;
   for (const answer of answers) {
     answer.score =
-      answer.choice !== question.correctBoolean
+      !isCorrectAnswer(question, answer)
         ? 0
         : answer.answeredAt.getTime() === first
           ? 3

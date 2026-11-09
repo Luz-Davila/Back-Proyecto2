@@ -32,6 +32,8 @@ const QUIZ_EXAMPLE = {
   ownerId: '6f1c2b1e-8d2a-4c3b-9e1f-0a1b2c3d4e5f',
   title: 'Animales del bosque',
   description: 'Repaso corto para el final de la clase',
+  imageKey: null,
+  imageUrl: null,
   createdAt: '2026-10-25T18:00:00.000Z',
   updatedAt: '2026-10-25T18:00:00.000Z',
 };

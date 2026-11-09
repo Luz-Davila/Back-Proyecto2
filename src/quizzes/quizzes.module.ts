@@ -5,6 +5,8 @@ import { StorageModule } from '../storage/storage.module';
 import { Question } from './question.entity';
 import { QuestionImagesController } from './question-images.controller';
 import { QuestionImagesService } from './question-images.service';
+import { QuizImagesController } from './quiz-images.controller';
+import { QuizImagesService } from './quiz-images.service';
 import {
   QuestionsController,
   QuizQuestionsController,
@@ -28,12 +30,14 @@ import { QuestionBatchesService } from './question-batches.service';
     QuizQuestionsController,
     QuestionsController,
     QuestionImagesController,
+    QuizImagesController,
     QuestionBatchesController,
   ],
   providers: [
     QuizzesService,
     QuestionsService,
     QuestionImagesService,
+    QuizImagesService,
     QuestionBatchesService,
   ],
   exports: [QuizzesService, QuestionsService],

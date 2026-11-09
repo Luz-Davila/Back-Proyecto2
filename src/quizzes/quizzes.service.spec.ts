@@ -17,10 +17,11 @@ describe('QuizzesService', () => {
     save: jest.Mock;
     findOne: jest.Mock;
     findOneBy: jest.Mock;
+    update: jest.Mock;
     remove: jest.Mock;
   };
   let profiles: { getOrCreate: jest.Mock };
-  let storage: { signedUrl: jest.Mock };
+  let storage: { signedUrl: jest.Mock; remove: jest.Mock };
   let service: QuizzesService;
 
   beforeEach(() => {
@@ -37,6 +38,7 @@ describe('QuizzesService', () => {
       save: jest.fn(async (value) => value),
       findOne: jest.fn(),
       findOneBy: jest.fn(),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
       remove: jest.fn(),
     };
 
@@ -44,7 +46,10 @@ describe('QuizzesService', () => {
       getOrCreate: jest.fn().mockResolvedValue({ userId: OWNER.id, role: 'teacher' }),
       requireTeacher: jest.fn().mockResolvedValue({ userId: OWNER.id, role: 'teacher' }),
     };
-    storage = { signedUrl: jest.fn(async (key: string) => `https://storage.test/${key}`) };
+    storage = {
+      signedUrl: jest.fn(async (key: string) => `https://storage.test/${key}`),
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
     service = new QuizzesService(
       repository as unknown as Repository<Quiz>,
       profiles as unknown as ProfilesService,
@@ -58,6 +63,7 @@ describe('QuizzesService', () => {
       ownerId,
       title: 'Quiz de prueba',
       description: null,
+      imageKey: null,
       questions: [],
     } as unknown as Quiz;
   }

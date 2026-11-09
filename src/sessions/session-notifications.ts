@@ -162,18 +162,24 @@ export class SessionNotifications implements OnModuleDestroy {
         serverTime: state.serverTime,
         reviewDurationSeconds: committed.snapshot.session.reviewDurationSeconds,
         scoreboard: sessionScoreboard(committed.snapshot),
-        remainingMs:
-          state.phase === 'ANSWERING' && state.currentQuestion
-            ? Math.max(
-                0,
-                Date.parse(state.currentQuestion.closesAt) -
-                  Date.parse(state.serverTime),
-              )
-            : 0,
+        remainingMs: remainingMsOf(state),
         state,
       };
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
+}
+
+function remainingMsOf(state: RoomEnvelope['state']): number {
+  const question = state.currentQuestion;
+  if (!question) return 0;
+  const target =
+    state.phase === 'ANSWERING'
+      ? question.closesAt
+      : state.phase === 'REVIEW'
+        ? question.reviewEndsAt
+        : null;
+  if (!target) return 0;
+  return Math.max(0, Date.parse(target) - Date.parse(state.serverTime));
 }

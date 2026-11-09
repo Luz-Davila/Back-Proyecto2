@@ -38,8 +38,6 @@ export class SessionAnswersService {
     user: AuthenticatedUser,
     input: SubmitAnswerInput,
   ): Promise<AnswerReceipt> {
-    if (typeof input.choice !== 'boolean')
-      throw new SessionError('VALIDATION_ERROR');
     const sessionId = await this.repository.sessionForQuestion(
       input.sessionQuestionId,
     );
@@ -51,11 +49,22 @@ export class SessionAnswersService {
           { id: sessionId },
           async (manager, session) => {
             const aggregate = await this.repository.snapshot(manager, session);
-            const { participant, existing } = authorizeAnswer(
+            const { participant, existing, question } = authorizeAnswer(
               aggregate,
               user.id,
               input,
             );
+            const multiple = (question.kind ?? 'boolean') === 'multiple';
+            if (multiple) {
+              if (
+                !Number.isInteger(input.choiceIndex) ||
+                (input.choiceIndex as number) < 0 ||
+                (input.choiceIndex as number) > 3
+              )
+                throw new SessionError('VALIDATION_ERROR');
+            } else if (typeof input.choice !== 'boolean') {
+              throw new SessionError('VALIDATION_ERROR');
+            }
             if (existing)
               return {
                 receipt: answerReceipt(existing),
@@ -68,7 +77,8 @@ export class SessionAnswersService {
               manager.create(Answer, {
                 sessionQuestionId: input.sessionQuestionId,
                 participantId: participant.id,
-                choice: input.choice,
+                choice: multiple ? null : input.choice,
+                choiceIndex: multiple ? input.choiceIndex : null,
                 answeredAt: now,
                 score: 0,
               }),
