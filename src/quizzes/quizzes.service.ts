@@ -93,10 +93,16 @@ export class QuizzesService {
       truncated: quiz.questions.length > 30,
       questions: quiz.questions
         .slice(0, 30)
-        .map(({ statement, correctBoolean }) => ({
-          statement,
-          correctBoolean,
-        })),
+        .map(({ statement, kind, correctBoolean, options, correctIndexes }) => {
+          const resolvedKind = kind === 'multiple' ? ('multiple' as const) : ('boolean' as const);
+          return {
+            statement,
+            kind: resolvedKind,
+            correctBoolean,
+            options: resolvedKind === 'multiple' ? options : null,
+            correctIndexes: resolvedKind === 'multiple' ? correctIndexes : null,
+          };
+        }),
     };
   }
 

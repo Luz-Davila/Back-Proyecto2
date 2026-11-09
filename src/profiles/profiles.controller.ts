@@ -15,6 +15,7 @@ import { ProfilesService } from './profiles.service';
 const PROFILE_EXAMPLE = {
   userId: '6f1c2b1e-8d2a-4c3b-9e1f-0a1b2c3d4e5f',
   displayName: 'Ana Pérez',
+  avatarId: 'book',
   role: 'teacher',
   createdAt: '2026-10-25T18:00:00.000Z',
   updatedAt: '2026-10-25T18:00:00.000Z',
@@ -38,7 +39,7 @@ export class ProfilesController {
   }
 
   @Patch('me')
-  @ApiOperation({ summary: 'Actualiza el nombre visible del usuario autenticado' })
+    @ApiOperation({ summary: 'Actualiza el nombre visible y el avatar del usuario autenticado' })
   @ApiOkResponse({
     description: 'Perfil actualizado',
     schema: { example: { ...PROFILE_EXAMPLE, displayName: 'Ana P.' } },

@@ -20,7 +20,7 @@ describe('QuizzesService', () => {
     update: jest.Mock;
     remove: jest.Mock;
   };
-  let profiles: { getOrCreate: jest.Mock };
+  let profiles: { getOrCreate: jest.Mock; requireTeacher: jest.Mock };
   let storage: { signedUrl: jest.Mock; remove: jest.Mock };
   let service: QuizzesService;
 
@@ -107,7 +107,13 @@ describe('QuizzesService', () => {
     expect(context.questions).toHaveLength(30);
     expect(context.truncated).toBe(true);
     expect(context.questionsCount).toBe(31);
-    expect(Object.keys(context.questions[0]).sort()).toEqual(['correctBoolean', 'statement']);
+    expect(Object.keys(context.questions[0]).sort()).toEqual([
+      'correctBoolean',
+      'correctIndexes',
+      'kind',
+      'options',
+      'statement',
+    ]);
     expect(JSON.stringify(context)).not.toContain('privado');
     expect(JSON.stringify(context)).not.toContain('interno');
     expect(storage.signedUrl).not.toHaveBeenCalled();

@@ -30,4 +30,17 @@ describe('UpdateProfileDto', () => {
   it('rechaza un valor que no es texto', async () => {
     await expect(errorsFor(12345)).resolves.toEqual(['displayName']);
   });
+
+  it('acepta un avatar del catálogo y rechaza uno desconocido', async () => {
+    await expect(
+      validate(plainToInstance(UpdateProfileDto, { displayName: 'Ana', avatarId: 'wizard' })),
+    ).resolves.toEqual([]);
+    await expect(
+      validate(plainToInstance(UpdateProfileDto, { displayName: 'Ana', avatarId: 'king' })),
+    ).resolves.toEqual([]);
+    const errors = await validate(
+      plainToInstance(UpdateProfileDto, { displayName: 'Ana', avatarId: 'robot' }),
+    );
+    expect(errors.map((error) => error.property)).toEqual(['avatarId']);
+  });
 });

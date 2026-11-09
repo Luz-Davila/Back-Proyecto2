@@ -42,6 +42,7 @@ describe('ProfilesService', () => {
     expect(values).toHaveBeenCalledWith({
       userId: USER_ID,
       displayName: 'Ana Pérez',
+      avatarId: 'book',
       role: 'student',
     });
   });
@@ -60,6 +61,7 @@ describe('ProfilesService', () => {
     expect(values).toHaveBeenCalledWith({
       userId: USER_ID,
       displayName: 'Ana Pérez',
+      avatarId: 'book',
       role: 'teacher',
     });
   });
@@ -73,6 +75,7 @@ describe('ProfilesService', () => {
     expect(values).toHaveBeenCalledWith({
       userId: USER_ID,
       displayName: 'ana.perez',
+      avatarId: 'book',
       role: 'student',
     });
   });
@@ -85,6 +88,7 @@ describe('ProfilesService', () => {
     expect(values).toHaveBeenCalledWith({
       userId: USER_ID,
       displayName: 'Jugador',
+      avatarId: 'book',
       role: 'student',
     });
   });
@@ -105,5 +109,16 @@ describe('ProfilesService', () => {
 
     expect(update).toHaveBeenCalledWith({ userId: USER_ID }, { displayName: 'Ana Nueva' });
     expect(result.displayName).toBe('Ana Nueva');
+  });
+
+  it('actualiza el avatar cuando viene en el dto', async () => {
+    findOneByOrFail.mockResolvedValue({ userId: USER_ID, displayName: 'Ana', avatarId: 'wizard' } as Profile);
+
+    await service.update({ id: USER_ID }, { displayName: 'Ana', avatarId: 'wizard' });
+
+    expect(update).toHaveBeenCalledWith(
+      { userId: USER_ID },
+      { displayName: 'Ana', avatarId: 'wizard' },
+    );
   });
 });

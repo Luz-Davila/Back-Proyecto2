@@ -18,7 +18,13 @@ export interface QuizContext {
   description: string | null;
   questionsCount: number;
   truncated: boolean;
-  questions: { statement: string; correctBoolean: boolean }[];
+  questions: {
+    statement: string;
+    kind: 'boolean' | 'multiple';
+    correctBoolean: boolean;
+    options: string[] | null;
+    correctIndexes: number[] | null;
+  }[];
 }
 
 export interface ChatResponse {

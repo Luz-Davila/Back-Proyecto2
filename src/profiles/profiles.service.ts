@@ -5,6 +5,7 @@ import type { EntityManager } from 'typeorm';
 import { AuthenticatedUser } from '../auth/auth.service';
 import { Profile } from './profile.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { DEFAULT_OWL_AVATAR_ID } from './owl-avatar';
 import { parseUserRole } from './user-role';
 
 const DEFAULT_DISPLAY_NAME = 'Jugador';
@@ -28,6 +29,7 @@ export class ProfilesService {
       .values({
         userId: user.id,
         displayName: initialDisplayName(user),
+        avatarId: DEFAULT_OWL_AVATAR_ID,
         role: parseUserRole(user.appRole) ?? 'student',
       })
       .orIgnore()
@@ -56,7 +58,10 @@ export class ProfilesService {
     await this.getOrCreate(user);
     await this.profiles.update(
       { userId: user.id },
-      { displayName: dto.displayName },
+      {
+        displayName: dto.displayName,
+        ...(dto.avatarId ? { avatarId: dto.avatarId } : {}),
+      },
     );
 
     return this.profiles.findOneByOrFail({ userId: user.id });

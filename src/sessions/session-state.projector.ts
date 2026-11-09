@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { parseOwlAvatarId } from '../profiles/owl-avatar';
 import { StorageService } from '../storage/storage.service';
 import type { SessionAggregate } from './session-aggregate';
 import type { SessionParticipant } from './session-participant.entity';
@@ -22,6 +23,7 @@ export class SessionStateProjector {
       sessionId: participant.sessionId,
       userId: participant.userId,
       displayName: participant.displayName,
+      avatarId: parseOwlAvatarId(participant.avatarId),
       joinedAt: participant.joinedAt.toISOString(),
     };
   }

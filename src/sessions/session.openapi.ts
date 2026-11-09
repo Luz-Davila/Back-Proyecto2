@@ -21,6 +21,7 @@ export const PARTICIPANT_SCHEMA = object({
   sessionId: uuid,
   userId: uuid,
   displayName: text,
+  avatarId: text,
   joinedAt: date,
 });
 const questionFields = {
@@ -93,6 +94,7 @@ export const SESSION_HISTORY_ITEM_SCHEMA = object({
     items: object({
       participantId: uuid,
       displayName: text,
+      avatarId: text,
       totalScore: integer,
       rank: integer,
     }),

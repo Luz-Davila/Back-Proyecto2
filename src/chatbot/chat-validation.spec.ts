@@ -110,6 +110,18 @@ describe('Contratos y frontera de herramientas del chatbot', () => {
     );
     expect(result.draft?.questions).toHaveLength(1);
     expect(JSON.parse(result.result)).toEqual({ prepared: 1, saved: false });
+    const multiple = {
+      statement: '¿Cuál es un paradigma declarativo?',
+      kind: 'multiple' as const,
+      options: ['Imperativo', 'Funcional', 'Ensamblador', 'Máquina'],
+      correctIndexes: [1],
+    };
+    const prepared = await tools.execute(
+      call('proposeQuestions', { questions: [multiple] }),
+      context,
+      1,
+    );
+    expect(prepared.draft?.questions[0]).toMatchObject(multiple);
   });
 
   it('conserva estructura de seguridad C# adaptada al ámbito educativo', () => {

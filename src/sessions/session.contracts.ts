@@ -62,6 +62,7 @@ export interface ParticipantView {
   sessionId: string;
   userId: string;
   displayName: string;
+  avatarId: string;
   joinedAt: string;
 }
 
@@ -118,6 +119,7 @@ export const SESSION_HISTORY_LIMIT = 50;
 export interface SessionHistoryRankingRow {
   participantId: string;
   displayName: string;
+  avatarId: string;
   totalScore: number;
   rank: number;
 }

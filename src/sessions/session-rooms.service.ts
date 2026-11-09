@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/auth.service';
+import { parseOwlAvatarId } from '../profiles/owl-avatar';
 import { Profile } from '../profiles/profile.entity';
 import { ProfilesService } from '../profiles/profiles.service';
 import { Question } from '../quizzes/question.entity';
@@ -226,6 +227,7 @@ export class SessionRoomsService {
                 sessionId: session.id,
                 userId: user.id,
                 displayName: profile.displayName,
+                avatarId: parseOwlAvatarId(profile.avatarId),
               }),
             );
             await manager.insert(ActiveSessionMembership, {

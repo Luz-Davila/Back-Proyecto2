@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
+import {
+  DEFAULT_OWL_AVATAR_ID,
+  parseOwlAvatarId,
+} from '../profiles/owl-avatar';
 import { isCorrectAnswer } from '../quizzes/question-kind';
 import { ActiveSessionMembership } from './active-session-membership.entity';
 import { Answer } from './answer.entity';
@@ -274,6 +278,12 @@ function toHistoryItem(
       participant.displayName,
     ]),
   );
+  const avatars = new Map(
+    sessionParticipants.map((participant) => [
+      participant.id,
+      parseOwlAvatarId(participant.avatarId),
+    ]),
+  );
   const sessionQuestions = questions
     .filter((question) => question.sessionId === session.id)
     .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
@@ -307,6 +317,7 @@ function toHistoryItem(
     .map((result) => ({
       participantId: result.participantId,
       displayName: names.get(result.participantId) ?? 'Participante',
+      avatarId: avatars.get(result.participantId) ?? DEFAULT_OWL_AVATAR_ID,
       totalScore: result.totalScore,
       rank: result.rank,
     }));

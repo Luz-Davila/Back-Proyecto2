@@ -12,6 +12,7 @@ import {
 import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
 import { lockQuizForWrite } from './quiz-write-coordinator';
+import { resolveCreateQuestion } from './question-kind';
 
 @Injectable()
 export class QuestionBatchesService {
@@ -27,9 +28,9 @@ export class QuestionBatchesService {
   ): Promise<QuestionBatchReceipt> {
     const dto = await validateDto(CreateQuestionBatchDto, input);
     await this.profiles.requireTeacher(user);
-    const questions = dto.questions.map(({ statement, correctBoolean }) => ({
-      statement,
-      correctBoolean,
+    const questions = dto.questions.map((item) => ({
+      statement: item.statement,
+      ...resolveCreateQuestion(item),
     }));
     const payloadHash = createHash('sha256')
       .update(JSON.stringify(questions))
@@ -57,9 +58,6 @@ export class QuestionBatchesService {
           Question,
           manager.create(Question, {
             ...value,
-            kind: 'boolean',
-            options: null,
-            correctIndexes: null,
             quizId,
             position: offset + index,
             imageKey: null,
