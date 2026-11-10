@@ -155,6 +155,40 @@ describe('Adjudicación 0/1/3 al cierre', () => {
     expect(f.questions[1].scoredAt).toBeNull();
   });
 
+  it('suma un punto extra por cada acierto seguido después del primero', () => {
+    const f = createSessionFixture(30);
+    const opened = f.clock.now();
+    for (const question of f.questions) {
+      Object.assign(question, {
+        status: 'CLOSED',
+        openedAt: opened,
+        closesAt: new Date(opened.getTime() + 30_000),
+        closedAt: new Date(opened.getTime() + 10_000),
+      });
+    }
+    const aggregate: SessionAggregate = {
+      session: f.session,
+      questions: f.questions,
+      participants: [f.participant],
+      answers: f.questions.map((question) =>
+        Object.assign(new Answer(), {
+          id: randomUUID(),
+          sessionQuestionId: question.id,
+          participantId: f.participant.id,
+          choice: question.correctBoolean,
+          answeredAt: opened,
+          score: 0,
+        }),
+      ),
+      results: [],
+    };
+
+    scoreClosedQuestion(aggregate, f.questions[0], opened);
+    scoreClosedQuestion(aggregate, f.questions[1], opened);
+
+    expect(aggregate.answers.map((answer) => answer.score)).toEqual([3, 4]);
+  });
+
   it('el scoreboard histórico usa resultados persistidos sin convertir puntos', () => {
     const f = fixture([[true, 1000]]);
     finishSession(f.aggregate, f.host.id, f.clock.now());

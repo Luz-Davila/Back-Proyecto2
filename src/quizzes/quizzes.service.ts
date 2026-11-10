@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import {
   ForbiddenException,
   Injectable,
@@ -27,6 +28,8 @@ export class QuizzesService {
   constructor(
     @InjectRepository(Quiz)
     private readonly quizzes: Repository<Quiz>,
+    @InjectRepository(Question)
+    private readonly questions: Repository<Question>,
     private readonly profiles: ProfilesService,
     private readonly storage: StorageService,
   ) {}
@@ -53,6 +56,63 @@ export class QuizzesService {
     });
 
     return this.quizzes.save(quiz);
+  }
+
+  async duplicate(user: AuthenticatedUser, id: string): Promise<Quiz> {
+    await this.profiles.requireTeacher(user);
+    const source = await this.quizzes.findOne({
+      where: { id, ownerId: user.id },
+      relations: ['questions'],
+      order: { questions: { position: 'ASC' } },
+    });
+    if (!source) throw new NotFoundException('Cuestionario no encontrado');
+
+    const copy = await this.quizzes.save(
+      this.quizzes.create({
+        ownerId: user.id,
+        title: copyTitle(source.title),
+        description: source.description,
+        imageKey: null,
+      }),
+    );
+    const copiedKeys: string[] = [];
+    try {
+      if (source.imageKey) {
+        const imageKey = copiedImageKey(copy.id, 'cover', source.imageKey);
+        await this.storage.copy(source.imageKey, imageKey);
+        copiedKeys.push(imageKey);
+        copy.imageKey = imageKey;
+        await this.quizzes.save(copy);
+      }
+      for (const question of [...source.questions].sort(
+        (a, b) => a.position - b.position,
+      )) {
+        let imageKey: string | null = null;
+        if (question.imageKey) {
+          imageKey = copiedImageKey(copy.id, 'questions', question.imageKey);
+          await this.storage.copy(question.imageKey, imageKey);
+          copiedKeys.push(imageKey);
+        }
+        await this.questions.save(
+          this.questions.create({
+            quizId: copy.id,
+            statement: question.statement,
+            kind: question.kind,
+            correctBoolean: question.correctBoolean,
+            options: question.options,
+            correctIndexes: question.correctIndexes,
+            durationSeconds: question.durationSeconds,
+            imageKey,
+            position: question.position,
+          }),
+        );
+      }
+    } catch (error) {
+      await Promise.all(copiedKeys.map((key) => this.storage.remove(key)));
+      await this.quizzes.remove(copy);
+      throw error;
+    }
+    return copy;
   }
 
   async findOne(user: AuthenticatedUser, id: string): Promise<QuizDetail> {
@@ -153,4 +213,19 @@ export class QuizzesService {
   private signedUrl(imageKey: string | null | undefined): Promise<string | null> {
     return imageKey ? this.storage.signedUrl(imageKey, SIGNED_URL_SECONDS) : Promise.resolve(null);
   }
+}
+
+function copyTitle(title: string): string {
+  const next = `Copia de ${title}`;
+  return next.length <= 120 ? next : next.slice(0, 120);
+}
+
+function copiedImageKey(
+  quizId: string,
+  folder: 'cover' | 'questions',
+  sourceKey: string,
+): string {
+  const extension = sourceKey.split('.').pop()?.toLowerCase() ?? '';
+  const safe = /^[a-z0-9]+$/.test(extension) ? extension : 'png';
+  return `quizzes/${quizId}/${folder}/${randomUUID()}.${safe}`;
 }

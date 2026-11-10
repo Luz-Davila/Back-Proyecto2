@@ -66,6 +66,25 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  async copy(sourcePath: string, destinationPath: string): Promise<void> {
+    await this.prepareBucket();
+    const response = await this.request('/storage/v1/object/copy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bucketId: this.bucket,
+        sourceKey: sourcePath,
+        destinationKey: destinationPath,
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new InternalServerErrorException(
+        `No se pudo copiar la imagen (${response.status}): ${detail}`,
+      );
+    }
+  }
+
   async remove(path: string): Promise<void> {
     const response = await this.request(
       `/storage/v1/object/${this.bucket}/${encodePath(path)}`,

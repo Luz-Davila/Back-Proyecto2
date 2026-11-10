@@ -72,6 +72,14 @@ export class QuizzesController {
     return this.quizzes.create(user, dto);
   }
 
+  @Post(':id/duplicate')
+  @ApiOperation({ summary: 'Copia un cuestionario propio con sus preguntas, tiempos e imágenes' })
+  @ApiCreatedResponse({ description: 'Copia del cuestionario', schema: { example: QUIZ_EXAMPLE } })
+  @ApiNotFoundResponse({ description: 'No existe o pertenece a otro usuario' })
+  duplicate(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.quizzes.duplicate(user, id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Devuelve un cuestionario propio con sus preguntas ordenadas' })
   @ApiOkResponse({

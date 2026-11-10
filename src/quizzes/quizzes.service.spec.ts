@@ -3,6 +3,7 @@ import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { StorageService } from '../storage/storage.service';
+import { Question } from './question.entity';
 import { Quiz } from './quiz.entity';
 import { QuizzesService } from './quizzes.service';
 
@@ -21,7 +22,8 @@ describe('QuizzesService', () => {
     remove: jest.Mock;
   };
   let profiles: { getOrCreate: jest.Mock; requireTeacher: jest.Mock };
-  let storage: { signedUrl: jest.Mock; remove: jest.Mock };
+  let questions: { create: jest.Mock; save: jest.Mock };
+  let storage: { signedUrl: jest.Mock; remove: jest.Mock; copy: jest.Mock };
   let service: QuizzesService;
 
   beforeEach(() => {
@@ -46,12 +48,18 @@ describe('QuizzesService', () => {
       getOrCreate: jest.fn().mockResolvedValue({ userId: OWNER.id, role: 'teacher' }),
       requireTeacher: jest.fn().mockResolvedValue({ userId: OWNER.id, role: 'teacher' }),
     };
+    questions = {
+      create: jest.fn((value) => value),
+      save: jest.fn(async (value) => value),
+    };
     storage = {
       signedUrl: jest.fn(async (key: string) => `https://storage.test/${key}`),
       remove: jest.fn().mockResolvedValue(undefined),
+      copy: jest.fn().mockResolvedValue(undefined),
     };
     service = new QuizzesService(
       repository as unknown as Repository<Quiz>,
+      questions as unknown as Repository<Question>,
       profiles as unknown as ProfilesService,
       storage as unknown as StorageService,
     );
@@ -158,6 +166,37 @@ describe('QuizzesService', () => {
     await service.remove(OWNER, QUIZ_ID);
 
     expect(repository.remove).toHaveBeenCalledWith(expect.objectContaining({ id: QUIZ_ID }));
+  });
+
+  it('copia el título, el tiempo y el enunciado a un cuestionario nuevo', async () => {
+    repository.findOne.mockResolvedValue({
+      ...quizOf(OWNER.id),
+      description: 'Repaso',
+      questions: [
+        {
+          statement: 'El sol es una estrella',
+          kind: 'boolean',
+          correctBoolean: true,
+          options: null,
+          correctIndexes: null,
+          durationSeconds: 20,
+          imageKey: null,
+          position: 0,
+        },
+      ],
+    });
+    repository.save.mockImplementation(async (value) => ({ ...value, id: value.id ?? 'copia-id' }));
+
+    const copy = await service.duplicate(OWNER, QUIZ_ID);
+
+    expect(copy.title).toBe('Copia de Quiz de prueba');
+    expect(questions.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quizId: 'copia-id',
+        statement: 'El sol es una estrella',
+        durationSeconds: 20,
+      }),
+    );
   });
 
   it('rechaza eliminar el cuestionario de otro usuario', async () => {

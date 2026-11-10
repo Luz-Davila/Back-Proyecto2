@@ -47,15 +47,42 @@ export function scoreClosedQuestion(
     ? Math.min(...fastCorrect.map((a) => a.answeredAt.getTime()))
     : undefined;
   for (const answer of answers) {
-    answer.score =
+    const base =
       !isCorrectAnswer(question, answer)
         ? 0
         : answer.answeredAt.getTime() === first
           ? 3
           : 1;
+    answer.score =
+      base +
+      (base > 0 ? streakBonus(aggregate, question, answer.participantId) : 0);
   }
   question.scoredAt = new Date(now);
   return true;
+}
+
+/** Puntos extra por aciertos seguidos: el primero vale lo normal y cada uno más suma +1. */
+export function streakBonus(
+  aggregate: SessionAggregate,
+  question: SessionQuestion,
+  participantId: string,
+): number {
+  const ordered = [...aggregate.questions].sort(
+    (a, b) => a.position - b.position || a.id.localeCompare(b.id),
+  );
+  const index = ordered.findIndex((item) => item.id === question.id);
+  let streak = 1;
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const previous = ordered[cursor];
+    const answer = aggregate.answers.find(
+      (item) =>
+        item.sessionQuestionId === previous.id &&
+        item.participantId === participantId,
+    );
+    if (!answer || !isCorrectAnswer(previous, answer)) break;
+    streak += 1;
+  }
+  return streak - 1;
 }
 
 export function closedQuestionScores(
