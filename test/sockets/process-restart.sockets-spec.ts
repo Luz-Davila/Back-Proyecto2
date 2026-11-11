@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Answer } from '../../src/sessions/answer.entity';
 import { SessionParticipant } from '../../src/sessions/session-participant.entity';
+import type { AnswerReceipt } from '../../src/sessions/session.contracts';
 import type { RealtimeJoinResult } from '../../src/sessions/realtime/session-realtime.contracts';
 import {
   ackData,
@@ -13,6 +14,56 @@ describe('Reinicio de un proceso backend real con PostgreSQL persistido', () => 
   let h: LocalGameHarness;
   afterEach(async () => {
     await h?.close();
+  });
+  it('una caída pierde el ticket y el INSERT sin commit; retry nuevo no se retrofecha', async () => {
+    h = await createLocalGameHarness({ profile: true });
+    await h.start();
+    const r = await h.seedRoom(120, 15);
+    const host = await h.connect(r.host);
+    const user = randomUUID();
+    const socket = await h.connect(user);
+    ackData(await localCommand(socket, 'room:join', { code: r.state.code }));
+    const opened = ackData(
+      await localCommand(host, 'game:start', { sessionId: r.state.id }),
+    );
+    const input = {
+      sessionQuestionId: opened.state.currentQuestion!.id,
+      choice: true,
+    };
+    const hold = await h.holdNextAnswer();
+    const lost = localCommand(socket, 'answer:submit', input, 2000).catch(
+      () => undefined,
+    );
+    await hold.inserted;
+    // A different PostgreSQL connection cannot see the uncommitted INSERT.
+    expect(await h.dataSource.getRepository(Answer).count()).toBe(0);
+    await h.crash();
+    await lost;
+    expect(await h.dataSource.getRepository(Answer).count()).toBe(0);
+    await h.start();
+    const reconnected = await h.connect(user);
+    ackData(
+      await localCommand(reconnected, 'room:join', { code: r.state.code }),
+    );
+    const retriedAt = Date.now();
+    const receipt = ackData(
+      await localCommand<{ answer: AnswerReceipt }>(
+        reconnected,
+        'answer:submit',
+        input,
+      ),
+    ).answer;
+    expect(Date.parse(receipt.answeredAt)).toBeGreaterThanOrEqual(retriedAt);
+    expect(await h.dataSource.getRepository(Answer).count()).toBe(1);
+    expect(
+      ackData(
+        await localCommand<{ answer: AnswerReceipt }>(
+          reconnected,
+          'answer:submit',
+          input,
+        ),
+      ).answer,
+    ).toEqual(receipt);
   });
   it.each([
     { phase: 'ANSWERING', expired: false },

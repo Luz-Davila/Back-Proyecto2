@@ -583,8 +583,8 @@ describe('Gateway real: salas, permisos y preguntas seguras', () => {
     const persist = ctx.repository.persist.bind(ctx.repository);
     jest
       .spyOn(ctx.repository, 'persist')
-      .mockImplementationOnce(async (manager, aggregate) => {
-        await persist(manager, aggregate);
+      .mockImplementationOnce(async (...args) => {
+        await persist(...args);
         throw new Error('rollback');
       });
     expect(

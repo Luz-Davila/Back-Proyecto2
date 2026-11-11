@@ -364,8 +364,8 @@ describe('Motor de partidas y carreras en PostgreSQL', () => {
     const persist = ctx.repository.persist.bind(ctx.repository);
     jest
       .spyOn(ctx.repository, 'persist')
-      .mockImplementationOnce(async (manager, aggregate) => {
-        await persist(manager, aggregate);
+      .mockImplementationOnce(async (...args) => {
+        await persist(...args);
         throw new Error('Fallo de prueba después de todas las escrituras');
       });
     await expect(

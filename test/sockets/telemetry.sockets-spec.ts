@@ -149,8 +149,8 @@ describe('Telemetría de operaciones reales y rollbacks', () => {
     const persist = ctx.repository.persist.bind(ctx.repository);
     jest
       .spyOn(ctx.repository, 'persist')
-      .mockImplementationOnce(async (manager, aggregate) => {
-        await persist(manager, aggregate);
+      .mockImplementationOnce(async (...args) => {
+        await persist(...args);
         throw new Error('rollback');
       });
     await command(r.sockets[0], 'answer:submit', r.input);

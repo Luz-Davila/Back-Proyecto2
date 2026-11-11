@@ -472,8 +472,8 @@ describe('answer:submit y clasificación multiusuario por Socket.IO', () => {
     const persist = ctx.repository.persist.bind(ctx.repository);
     jest
       .spyOn(ctx.repository, 'persist')
-      .mockImplementationOnce(async (manager, aggregate) => {
-        await persist(manager, aggregate);
+      .mockImplementationOnce(async (...args) => {
+        await persist(...args);
         throw new Error('score write failure');
       });
     expect(await r.answer(0)).toMatchObject({

@@ -4,7 +4,8 @@ import { GAME_INSTRUMENTS, GameTelemetry } from './game-telemetry';
 import { SessionError } from './session.error';
 import { SessionCoordinator } from './session-coordinator';
 import { TELEMETRY_PRIVACY } from '../telemetry-privacy';
-import { TelemetryLifecycle, registerTelemetry } from '../telemetry-lifecycle';
+import { TelemetryLifecycle } from '../telemetry-lifecycle';
+import { registerTelemetry } from '../telemetry-runtime';
 
 describe('Métricas de juego con receptor local', () => {
   it('catálogo, unidades, normalización y gauge no confunden sockets con jugadores', async () => {

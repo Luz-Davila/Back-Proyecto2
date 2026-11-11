@@ -52,15 +52,19 @@ export class SessionDeadlinesService implements OnModuleInit, OnModuleDestroy {
 
   private async drain(): Promise<void> {
     const deadlines = await this.repository.dueDeadlines(this.clock.now());
-    for (const deadline of deadlines) {
-      if (this.stopping) break;
-      try {
-        await this.lifecycle.processDeadline(deadline);
-      } catch {
-        this.logger.error(
-          'Falló un plazo de sesión; el estado persistido permite reintentarlo',
-        );
-      }
-    }
+    // Each room has its own admission/transaction queue. Waiting for one room
+    // must not withhold another room's already-due deadline.
+    await Promise.all(
+      deadlines.map(async (deadline) => {
+        if (this.stopping) return;
+        try {
+          await this.lifecycle.processDeadline(deadline);
+        } catch {
+          this.logger.error(
+            'Falló un plazo de sesión; el estado persistido permite reintentarlo',
+          );
+        }
+      }),
+    );
   }
 }

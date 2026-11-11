@@ -28,7 +28,9 @@ Copia `.env.example` a `.env` y completa los valores:
 | `PORT` | No | Puerto de la API (por defecto 3000) |
 | `CORS_ORIGIN` | No | Origen(es) permitidos, separados por coma |
 | `OTEL_SERVICE_NAME` | No | Nombre del servicio en la telemetría |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Si se define, se activa la exportación OTLP |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Si se define, se activa la exportación OTLP; el SDK agrega `/v1/metrics` y `/v1/traces` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | No | Cabeceras de autenticación OTLP (por ejemplo Grafana Cloud); nunca registrar el valor |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | No | `http/protobuf` por defecto; `http/json` alternativo; `grpc` no soportado |
 | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` | Para el seed | Usuario de demostración |
 | `DEEPSEEK_API_KEY` | Solo para chat | Clave privada de DeepSeek; nunca en frontend/logs |
 | `DEEPSEEK_MODEL` | No | Modelo del asistente, por defecto `deepseek-flash` (DeepSeek V4.1 Flash) |
@@ -275,8 +277,9 @@ errores y clasificación), sin incluir salas ajenas ni partidas aún abiertas.
 puntaje y si acertó cada pregunta. Solo el profesor puede crear cuestionarios (`POST /quizzes`).
 `room:join` y join REST recuperan al mismo participante también en FINISHED, sin otra reserva ni puntos.
 
-El [contrato, runbook de reinicio, catálogo de métricas y guía de demostración](docs/session-recovery-and-telemetry.md)
-incluye los diferidos de dispositivos físicos, VPS y Grafana, que no se consideran ejecutados.
+El [contrato, runbook de reinicio, catálogo de métricas HTTP y de juego, consultas PromQL y guía de demostración](docs/session-recovery-and-telemetry.md)
+incluye los diferidos de dispositivos físicos, VPS y dashboards visuales de Grafana, que no se consideran ejecutados.
+Las métricas HTTP se exportan por OTLP sin IDs, códigos de sala, query strings ni cuerpos.
 
 ### Máquina de estados y tiempos
 
@@ -596,8 +599,10 @@ La decisión completa, con alternativas y consecuencias, está en
   de entrega de tres segundos a pantallas.
 - **Paso 7:** recuperación por código/identidad y reinicio de proceso local cubiertos; la demostración
   de reinicio del VPS permanece pendiente de autorización y ejecución real.
-- **Paso 8:** métricas y ejecutor local medible disponibles; dispositivos físicos, cuenta/conexión y
-  dashboards Grafana pendientes. Los reportes locales no certifican capacidad máxima productiva.
+- **Paso 8:** métricas de juego, métricas HTTP OTLP con rutas normalizadas y ejecutor local medible
+  disponibles; dispositivos físicos, conexión real y dashboards visuales de Grafana pendientes de
+  verificación. Los reportes locales no certifican capacidad máxima productiva ni que Grafana Cloud
+  haya recibido ya una muestra.
 - El transporte requiere una instancia y recuperación mediante suscripción; no hay replay durable.
 - Las copias conservan la clave de imagen, no una copia física del binario; borrar ese objeto en
   Storage puede afectar una imagen histórica. La retención de binarios requiere un cambio separado.
@@ -616,8 +621,10 @@ src/
   profiles/      perfil del usuario autenticado
   quizzes/       cuestionarios, preguntas e imágenes
   sessions/      salas REST, dominio, estado seguro, plazos y Gateway/adaptadores en realtime/
+  observability/ métricas HTTP centralizadas y normalización segura de rutas
   storage/       cliente de Supabase Storage
   docs/          configuración de OpenAPI y Scalar
-  telemetry.ts   arranque de OpenTelemetry
+  telemetry.ts   arranque de OpenTelemetry y selección OTLP
+  telemetry-config.ts / telemetry-runtime.ts  configuración y cierre sin dependencias de Nest
 openspec/        especificación del cambio y especificaciones archivadas
 ```

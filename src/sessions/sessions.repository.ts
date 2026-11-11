@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { DataSource, EntityManager, In } from 'typeorm';
 import {
   DEFAULT_OWL_AVATAR_ID,
@@ -23,6 +24,13 @@ import type {
 import { SESSION_HISTORY_LIMIT } from './session.contracts';
 import { SessionError } from './session.error';
 import { SessionCoordinator } from './session-coordinator';
+import { sessionTable } from './session-sql';
+import {
+  hydrateAnswerContext,
+  type SessionAnswerContext,
+  type AnswerTransaction,
+} from './session-answer-context';
+import type { SubmitAnswerInput } from './session.contracts';
 import {
   SessionNotifications,
   type SessionCommitObserver,
@@ -44,30 +52,125 @@ export class SessionsRepository {
 
   locked<T>(
     where: { id: string } | { code: string },
-    work: (manager: EntityManager, session: GameSession) => Promise<T>,
+    work: (
+      manager: EntityManager,
+      session: GameSession,
+      snapshot: SessionAggregate,
+    ) => Promise<T>,
     observe?: SessionCommitObserver<T>,
+    previousWaitMs = 0,
   ): Promise<T> {
     return this.resolveId(where).then((id) =>
-      this.coordinator.run(id, async () => {
-        const result = await this.dataSource.transaction(async (manager) => {
-          const session = await manager.findOne(GameSession, {
-            where,
-            lock: { mode: 'pessimistic_write' },
+      this.coordinator.run(
+        id,
+        async () => {
+          const result = await this.dataSource.transaction(async (manager) => {
+            const session = await manager.findOne(GameSession, {
+              where,
+              lock: { mode: 'pessimistic_write' },
+            });
+            if (!session) throw new SessionError('SESSION_NOT_FOUND');
+            const snapshot = await this.snapshot(manager, session);
+            const before = structuredClone(snapshot);
+            const value = await work(manager, session, snapshot);
+            const after = await this.snapshot(manager, session);
+            return { value, before, after };
           });
-          if (!session) throw new SessionError('SESSION_NOT_FOUND');
-          const before = structuredClone(await this.snapshot(manager, session));
-          const value = await work(manager, session);
-          const after = await this.snapshot(manager, session);
-          return { value, before, after };
-        });
-        const committed = await this.notifications.committed(
-          result.before,
-          result.after,
-        );
-        await observe?.(result.value, committed);
-        return result.value;
-      }),
+          const committed = await this.notifications.committed(
+            result.before,
+            result.after,
+          );
+          await observe?.(result.value, committed);
+          return result.value;
+        },
+        previousWaitMs,
+      ),
     );
+  }
+
+  /** Private answer path: no full snapshots unless the accepted row closes a question. */
+  answerLocked<T>(
+    sessionId: string,
+    questionId: string,
+    userId: string,
+    work: (
+      manager: EntityManager,
+      context: SessionAnswerContext,
+    ) => Promise<AnswerTransaction<T>>,
+    previousWaitMs = 0,
+  ): Promise<T> {
+    return this.coordinator.run(
+      sessionId,
+      async () => {
+        const result = await this.dataSource.transaction(async (manager) => {
+          const rows = await manager.query<SessionAnswerContext[]>(
+            `
+          SELECT to_jsonb(s) AS session, to_jsonb(q) AS question,
+                 to_jsonb(p) AS participant, to_jsonb(a) AS existing
+          FROM ${sessionTable(manager, GameSession)} s
+          JOIN ${sessionTable(manager, SessionQuestion)} q ON q."sessionId" = s.id AND q.id = $2
+          LEFT JOIN ${sessionTable(manager, SessionParticipant)} p ON p."sessionId" = s.id AND p."userId" = $3
+          LEFT JOIN ${sessionTable(manager, Answer)} a ON a."sessionQuestionId" = q.id AND a."participantId" = p.id
+          WHERE s.id = $1 FOR UPDATE OF s`,
+            [sessionId, questionId, userId],
+          );
+          if (!rows[0]) throw new SessionError('SESSION_NOT_FOUND');
+          return work(manager, hydrateAnswerContext(rows[0]));
+        });
+        if (result.before && result.after)
+          await this.notifications.committed(result.before, result.after);
+        return result.value;
+      },
+      previousWaitMs,
+    );
+  }
+
+  async insertAcceptedAnswer(
+    manager: EntityManager,
+    context: SessionAnswerContext,
+    input: SubmitAnswerInput,
+    answeredAt: Date,
+  ): Promise<{ answer: Answer; complete: boolean }> {
+    const { session, question, participant } = context;
+    if (!participant) throw new SessionError('SESSION_NOT_FOUND');
+    const answers = sessionTable(manager, Answer);
+    const participants = sessionTable(manager, SessionParticipant);
+    const multiple = question.kind === 'multiple';
+    // A modifying CTE uses the statement's snapshot: COUNT sees previous rows,
+    // not the inserted one. Add RETURNING's one row, never a conflicting insert.
+    const rows = await manager.query<
+      Array<{ answer: Answer; answered: number; expected: number }>
+    >(
+      `
+      WITH inserted AS (
+        INSERT INTO ${answers} (id, "sessionQuestionId", "participantId", choice, "choiceIndex", "answeredAt", score)
+        VALUES ($1, $2, $3, $4, $5, $6, 0) RETURNING *
+      )
+      SELECT row_to_json(inserted) AS answer,
+        ((SELECT count(*) FROM ${answers} a JOIN ${participants} p ON p.id = a."participantId"
+          WHERE a."sessionQuestionId" = $2 AND p."sessionId" = $7 AND p."userId" <> $8
+            AND a."answeredAt" >= $9 AND a."answeredAt" < $10) + 1)::int AS answered,
+        (SELECT count(*)::int FROM ${participants} p WHERE p."sessionId" = $7 AND p."userId" <> $8) AS expected
+      FROM inserted`,
+      [
+        randomUUID(),
+        question.id,
+        participant.id,
+        multiple ? null : input.choice,
+        multiple ? input.choiceIndex : null,
+        answeredAt,
+        session.id,
+        session.hostId,
+        question.openedAt,
+        question.closesAt,
+      ],
+    );
+    const row = rows[0];
+    row.answer.answeredAt = new Date(row.answer.answeredAt);
+    return {
+      answer: row.answer,
+      complete: row.expected > 0 && row.answered === row.expected,
+    };
   }
 
   async historyForHost(hostId: string): Promise<SessionHistoryItem[]> {
@@ -206,24 +309,37 @@ export class SessionsRepository {
   async persist(
     manager: EntityManager,
     aggregate: SessionAggregate,
+    before: SessionAggregate,
   ): Promise<void> {
-    await manager.save(GameSession, aggregate.session);
-    await manager.save(SessionQuestion, aggregate.questions);
-    const scored = new Set(
-      aggregate.questions
-        .filter((q) => q.status === 'CLOSED' && q.scoredAt)
-        .map((q) => q.id),
+    if (JSON.stringify(before.session) !== JSON.stringify(aggregate.session))
+      await manager.save(GameSession, aggregate.session);
+    const previous = new Map(before.questions.map((q) => [q.id, q]));
+    const changed = aggregate.questions.filter(
+      (q) => JSON.stringify(previous.get(q.id)) !== JSON.stringify(q),
     );
-    for (const answer of aggregate.answers) {
-      if (scored.has(answer.sessionQuestionId)) {
-        await manager.update(
-          Answer,
-          { id: answer.id },
-          { score: answer.score },
-        );
-      }
+    if (changed.length) await manager.save(SessionQuestion, changed);
+    for (const question of changed) {
+      if (!question.scoredAt || previous.get(question.id)?.scoredAt) continue;
+      const answers = aggregate.answers.filter(
+        (a) => a.sessionQuestionId === question.id,
+      );
+      if (!answers.length) continue;
+      const parameters: unknown[] = [question.id];
+      const values = answers.map((answer) => {
+        parameters.push(answer.id, answer.score);
+        return `($${parameters.length - 1}::uuid, $${parameters.length}::integer)`;
+      });
+      await manager.query(
+        `UPDATE ${sessionTable(manager, Answer)} AS a SET score = v.score
+        FROM (VALUES ${values.join(', ')}) AS v(id, score)
+        WHERE a.id = v.id AND a."sessionQuestionId" = $1`,
+        parameters,
+      );
     }
-    if (aggregate.session.status === 'FINISHED') {
+    if (
+      aggregate.session.status === 'FINISHED' &&
+      before.session.status !== 'FINISHED'
+    ) {
       await manager.save(GameResult, aggregate.results);
       await manager.delete(ActiveSessionMembership, {
         sessionId: aggregate.session.id,
@@ -367,9 +483,7 @@ function toPlayedItem(
     .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
   const mineAnswers = new Map(
     answers
-      .filter(
-        (answer) => me != null && answer.participantId === me.id,
-      )
+      .filter((answer) => me != null && answer.participantId === me.id)
       .map((answer) => [answer.sessionQuestionId, answer]),
   );
   const playedQuestions: PlayedQuestion[] = sessionQuestions.map((question) => {
@@ -401,7 +515,8 @@ function toPlayedItem(
     playedChoiceIsCorrect(question),
   ).length;
   const wrongCount = playedQuestions.filter(
-    (question) => question.myChoice !== null && !playedChoiceIsCorrect(question),
+    (question) =>
+      question.myChoice !== null && !playedChoiceIsCorrect(question),
   ).length;
   return {
     id: session.id,
@@ -461,7 +576,10 @@ function questionStat(
 function playedChoiceIsCorrect(question: PlayedQuestion): boolean {
   if (question.myChoice === null) return false;
   if (question.kind === 'multiple') {
-    return typeof question.myChoice === 'number' && (question.correctIndexes ?? []).includes(question.myChoice);
+    return (
+      typeof question.myChoice === 'number' &&
+      (question.correctIndexes ?? []).includes(question.myChoice)
+    );
   }
   return question.myChoice === question.correctBoolean;
 }

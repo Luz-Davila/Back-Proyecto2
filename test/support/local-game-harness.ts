@@ -13,8 +13,11 @@ import type {
 } from '../../src/sessions/realtime/session-realtime.contracts';
 import type { GameMetricReader } from './game-metric-reader';
 import { localGameDatabase } from './local-game-database';
+import type { AnswerProfile } from './answer-profiler';
 
-export async function createLocalGameHarness() {
+export async function createLocalGameHarness(
+  options: { profile?: boolean } = {},
+) {
   const admin = localGameDatabase();
   const schema = `game_local_${randomUUID().replaceAll('-', '')}`;
   const ds = localGameDatabase(schema);
@@ -24,6 +27,7 @@ export async function createLocalGameHarness() {
   let url = '';
   const sockets = new Set<Socket>();
   let closed = false;
+  let closing: Promise<void> | undefined;
   await admin.initialize();
   let created = false;
   try {
@@ -82,8 +86,10 @@ export async function createLocalGameHarness() {
       else processToStop.kill();
     });
   }
-  async function close() {
-    if (closed) return;
+  function close(): Promise<void> {
+    return (closing ??= dispose());
+  }
+  async function dispose() {
     closed = true;
     process.off('SIGINT', onSignal);
     process.off('SIGTERM', onSignal);
@@ -113,6 +119,79 @@ export async function createLocalGameHarness() {
         cause: new AggregateError(failures),
       });
   }
+  async function crash() {
+    const current = child;
+    if (!current || current.exitCode !== null)
+      throw new Error('No hay hijo activo');
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error('Timeout al terminar el hijo propio')),
+        10000,
+      );
+      current.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      current.kill('SIGKILL');
+    });
+    child = undefined;
+    for (const socket of sockets) {
+      socket.disconnect();
+      socket.removeAllListeners();
+    }
+    sockets.clear();
+  }
+  async function holdNextAnswer(): Promise<{ inserted: Promise<void> }> {
+    const current = child;
+    if (!options.profile || !current?.connected)
+      throw new Error('Requiere hijo de prueba perfilado');
+    const id = randomUUID();
+    let inserted!: () => void;
+    let failed!: (error: Error) => void;
+    const pending = new Promise<void>((resolve, reject) => {
+      inserted = resolve;
+      failed = reject;
+    });
+    // Attach immediately, even if arming fails before the caller gets pending.
+    void pending.catch(() => {});
+    return new Promise((resolve, reject) => {
+      const finish = () => {
+        clearTimeout(timer);
+        current.off('message', message);
+        current.off('exit', exited);
+      };
+      const exited = () => {
+        finish();
+        const error = new Error('El hijo terminó antes del INSERT');
+        failed(error);
+        reject(error);
+      };
+      const timer = setTimeout(() => {
+        finish();
+        const error = new Error('Timeout de fixture de caída');
+        failed(error);
+        reject(error);
+      }, 10000);
+      const message = (value: unknown) => {
+        if (
+          !value ||
+          typeof value !== 'object' ||
+          !('id' in value) ||
+          value.id !== id ||
+          !('kind' in value)
+        )
+          return;
+        if (value.kind === 'answer-armed') resolve({ inserted: pending });
+        if (value.kind === 'answer-held') {
+          finish();
+          inserted();
+        }
+      };
+      current.on('message', message);
+      current.once('exit', exited);
+      current.send({ kind: 'hold-next-answer', id });
+    });
+  }
   const onSignal = () => {
     void close().catch(() => {
       process.exitCode = 1;
@@ -131,6 +210,7 @@ export async function createLocalGameHarness() {
       env: {
         ...process.env,
         OTEL_EXPORTER_OTLP_ENDPOINT: '',
+        LOCAL_GAME_PROFILE: options.profile ? '1' : '',
         LOCAL_GAME_SCHEMA: schema,
         LOCAL_GAME_JWKS: JSON.stringify({
           keys: [{ ...publicKey, kid: 'local-game', alg: 'ES256' }],
@@ -244,6 +324,44 @@ export async function createLocalGameHarness() {
       throw new Error(`HTTP ${result.status}: ${JSON.stringify(payload)}`);
     return payload as T;
   }
+  async function profile(
+    action: 'read' | 'reset',
+    latencyMs = 0,
+  ): Promise<AnswerProfile> {
+    const current = child;
+    if (!options.profile || !current?.connected)
+      throw new Error('Perfilador no habilitado');
+    const id = randomUUID();
+    return new Promise((resolve, reject) => {
+      const finish = (error?: Error) => {
+        clearTimeout(timer);
+        current.off('message', message);
+        current.off('exit', exited);
+        if (error) reject(error);
+      };
+      const exited = () => finish(new Error('El proceso perfilado terminó'));
+      const message = (value: unknown) => {
+        if (
+          !value ||
+          typeof value !== 'object' ||
+          !('id' in value) ||
+          value.id !== id
+        )
+          return;
+        if ('kind' in value && value.kind === 'profile') {
+          finish();
+          resolve(value as unknown as AnswerProfile);
+        } else finish(new Error('Falló la solicitud de perfil'));
+      };
+      const timer = setTimeout(
+        () => finish(new Error('Timeout del perfilador')),
+        15000,
+      );
+      current.on('message', message);
+      current.once('exit', exited);
+      current.send({ kind: 'profile', id, action, latencyMs });
+    });
+  }
   async function connect(id: string) {
     const socket = io(`${url}/sessions`, {
       auth: { token: await token(id) },
@@ -301,12 +419,15 @@ export async function createLocalGameHarness() {
     schema,
     start,
     stop,
+    crash,
+    holdNextAnswer,
     close,
     token,
     connect,
     http,
     seedRoom,
     getMetrics,
+    profile,
     snapshot: (id: string, code: string) =>
       http<RoomEnvelope>(id, 'GET', `/sessions/${code}/state`),
   };

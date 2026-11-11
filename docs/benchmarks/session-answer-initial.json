@@ -1,0 +1,2590 @@
+{
+  "createdAt": "2026-11-11T05:05:19.565Z",
+  "revision": "4ce9c9e84ff4c6e711ed375d689ac046b86ce5a2",
+  "dirty": true,
+  "sourceSha256": "a6fb2a02debf94938b8c32d1e0248aba94121187579e44513a424ae046087e80",
+  "sourceFiles": [
+    "src/sessions/session-admissions.ts",
+    "src/sessions/session-answers.service.ts",
+    "src/sessions/session-lifecycle.service.ts",
+    "src/sessions/session-coordinator.ts",
+    "src/sessions/session-deadlines.service.ts",
+    "src/sessions/sessions.repository.ts",
+    "src/sessions/session-answer-context.ts",
+    "src/sessions/session-sql.ts",
+    "src/sessions/session-scoring.ts",
+    "src/sessions/session.rules.ts",
+    "test/support/local-game-child.ts",
+    "test/support/local-game-harness.ts",
+    "test/support/answer-profiler.ts",
+    "test/benchmark-session-answers.ts"
+  ],
+  "node": "v22.23.4",
+  "platform": "win32",
+  "cpu": "Intel(R) Core(TM) i7-4712MQ CPU @ 2.30GHz",
+  "logicalCpus": 8,
+  "memoryGiB": 8,
+  "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.2.8",
+    "@nestjs/swagger": "^11.4.7",
+    "@nestjs/typeorm": "^11.0.3",
+    "@nestjs/websockets": "^11.2.8",
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.82.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.300.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.300.0",
+    "@opentelemetry/sdk-metrics": "^3.0.0",
+    "@opentelemetry/sdk-node": "^0.300.0",
+    "@scalar/nestjs-api-reference": "^1.2.31",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "^18.0.9",
+    "jose": "^5.10.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "socket.io": "^4.8.4",
+    "typeorm": "^0.3.31"
+  },
+  "conditions": "Una instancia local; PostgreSQL loopback exclusivo; JWT/Storage/telemetría locales; 30 sockets reales, sin navegador ni tráfico externo. Retardo artificial por sentencia perfilada, incluidos BEGIN/COMMIT. Sin otras cargas de pruebas.",
+  "cases": [
+    {
+      "name": "30x3",
+      "questions": 3,
+      "play": 3,
+      "latencyMs": 0,
+      "repetition": 1,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": true,
+      "invariants": {
+        "choices": true,
+        "dates": true,
+        "scores": true,
+        "stableClosedScores": true,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "PASS",
+      "ackMs": {
+        "count": 90,
+        "p50": 273.2,
+        "p95": 969.72,
+        "p99": 1144.54,
+        "max": 1144.54
+      },
+      "overBudget": 0,
+      "rejected": 0,
+      "timeouts": 0,
+      "participants": 30,
+      "persistedAnswers": 90,
+      "results": 30,
+      "uniqueReceipts": 90,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 87,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 94,
+        "queries": 444,
+        "queriesPerOperation": {
+          "count": 94,
+          "p50": 4,
+          "p95": 11,
+          "p99": 15,
+          "max": 15
+        },
+        "durationMs": {
+          "count": 94,
+          "p50": 244.53,
+          "p95": 935.87,
+          "p99": 1104.62,
+          "max": 1104.62
+        },
+        "queueMs": {
+          "count": 94,
+          "p50": 229.52,
+          "p95": 902.3,
+          "p99": 1037.16,
+          "max": 1037.16
+        },
+        "sqlMs": {
+          "count": 94,
+          "p50": 13.2,
+          "p95": 56.97,
+          "p99": 186.6,
+          "max": 186.6
+        },
+        "artificialMs": 0,
+        "snapshots": 11,
+        "snapshotAnswerRows": 540,
+        "scoreBatches": 3,
+        "scoreRows": 90,
+        "queryGroups": {
+          "START transaction": 94,
+          "SELECT game_sessions": 98,
+          "SELECT session_questions": 20,
+          "SELECT session_participants": 11,
+          "SELECT answers": 11,
+          "SELECT game_results": 11,
+          "UPDATE game_sessions": 4,
+          "UPDATE session_questions": 6,
+          "COMMIT transaction": 94,
+          "WITH answers": 90,
+          "UPDATE answers": 3,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 61.11,
+            "p95": 61.11,
+            "p99": 61.11,
+            "max": 61.11
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.1,
+            "p95": 0.1,
+            "p99": 0.1,
+            "max": 0.1
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 40.88,
+            "p95": 40.88,
+            "p99": 40.88,
+            "max": 40.88
+          },
+          "artificialMs": 0,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 90,
+          "queries": 384,
+          "queriesPerOperation": {
+            "count": 90,
+            "p50": 4,
+            "p95": 5,
+            "p99": 11,
+            "max": 11
+          },
+          "durationMs": {
+            "count": 90,
+            "p50": 255.77,
+            "p95": 935.87,
+            "p99": 1104.62,
+            "max": 1104.62
+          },
+          "queueMs": {
+            "count": 90,
+            "p50": 243.09,
+            "p95": 902.3,
+            "p99": 1037.16,
+            "max": 1037.16
+          },
+          "sqlMs": {
+            "count": 90,
+            "p50": 12.86,
+            "p95": 45.02,
+            "p99": 62.71,
+            "max": 62.71
+          },
+          "artificialMs": 0,
+          "snapshots": 3,
+          "snapshotAnswerRows": 180,
+          "scoreBatches": 3,
+          "scoreRows": 90,
+          "queryGroups": {
+            "SELECT session_questions": 9,
+            "START transaction": 90,
+            "SELECT game_sessions": 90,
+            "WITH answers": 90,
+            "COMMIT transaction": 90,
+            "SELECT session_participants": 3,
+            "SELECT answers": 3,
+            "SELECT game_results": 3,
+            "UPDATE session_questions": 3,
+            "UPDATE answers": 3
+          }
+        },
+        "deadline:REVIEW": {
+          "operations": 3,
+          "queries": 45,
+          "queriesPerOperation": {
+            "count": 3,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 3,
+            "p50": 78.82,
+            "p95": 231.38,
+            "p99": 231.38,
+            "max": 231.38
+          },
+          "queueMs": {
+            "count": 3,
+            "p50": 0.08,
+            "p95": 0.13,
+            "p99": 0.13,
+            "max": 0.13
+          },
+          "sqlMs": {
+            "count": 3,
+            "p50": 66.33,
+            "p95": 186.6,
+            "p99": 186.6,
+            "max": 186.6
+          },
+          "artificialMs": 0,
+          "snapshots": 6,
+          "snapshotAnswerRows": 360,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 3,
+            "SELECT game_sessions": 6,
+            "SELECT session_questions": 8,
+            "SELECT session_participants": 6,
+            "SELECT answers": 6,
+            "SELECT game_results": 6,
+            "UPDATE game_sessions": 3,
+            "UPDATE session_questions": 2,
+            "COMMIT transaction": 3,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [],
+      "cleaned": true,
+      "elapsedMs": 32835
+    },
+    {
+      "name": "30x3",
+      "questions": 3,
+      "play": 3,
+      "latencyMs": 0,
+      "repetition": 2,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": true,
+      "invariants": {
+        "choices": true,
+        "dates": true,
+        "scores": true,
+        "stableClosedScores": true,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "PASS",
+      "ackMs": {
+        "count": 90,
+        "p50": 1249.44,
+        "p95": 2808,
+        "p99": 3079.23,
+        "max": 3079.23
+      },
+      "overBudget": 0,
+      "rejected": 0,
+      "timeouts": 0,
+      "participants": 30,
+      "persistedAnswers": 90,
+      "results": 30,
+      "uniqueReceipts": 90,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 87,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 94,
+        "queries": 444,
+        "queriesPerOperation": {
+          "count": 94,
+          "p50": 4,
+          "p95": 11,
+          "p99": 15,
+          "max": 15
+        },
+        "durationMs": {
+          "count": 94,
+          "p50": 1198.53,
+          "p95": 2793.47,
+          "p99": 3054.97,
+          "max": 3054.97
+        },
+        "queueMs": {
+          "count": 94,
+          "p50": 1080.15,
+          "p95": 2663.88,
+          "p99": 2911,
+          "max": 2911
+        },
+        "sqlMs": {
+          "count": 94,
+          "p50": 98.77,
+          "p95": 167.02,
+          "p99": 326.99,
+          "max": 326.99
+        },
+        "artificialMs": 0,
+        "snapshots": 11,
+        "snapshotAnswerRows": 540,
+        "scoreBatches": 3,
+        "scoreRows": 90,
+        "queryGroups": {
+          "START transaction": 94,
+          "SELECT game_sessions": 98,
+          "SELECT session_questions": 20,
+          "SELECT session_participants": 11,
+          "SELECT answers": 11,
+          "SELECT game_results": 11,
+          "UPDATE game_sessions": 4,
+          "UPDATE session_questions": 6,
+          "COMMIT transaction": 94,
+          "WITH answers": 90,
+          "UPDATE answers": 3,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 71.08,
+            "p95": 71.08,
+            "p99": 71.08,
+            "max": 71.08
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.35,
+            "p95": 0.35,
+            "p99": 0.35,
+            "max": 0.35
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 49.64,
+            "p95": 49.64,
+            "p99": 49.64,
+            "max": 49.64
+          },
+          "artificialMs": 0,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 90,
+          "queries": 384,
+          "queriesPerOperation": {
+            "count": 90,
+            "p50": 4,
+            "p95": 5,
+            "p99": 11,
+            "max": 11
+          },
+          "durationMs": {
+            "count": 90,
+            "p50": 1235.49,
+            "p95": 2793.47,
+            "p99": 3054.97,
+            "max": 3054.97
+          },
+          "queueMs": {
+            "count": 90,
+            "p50": 1183.29,
+            "p95": 2663.88,
+            "p99": 2911,
+            "max": 2911
+          },
+          "sqlMs": {
+            "count": 90,
+            "p50": 98.77,
+            "p95": 162.52,
+            "p99": 326.99,
+            "max": 326.99
+          },
+          "artificialMs": 0,
+          "snapshots": 3,
+          "snapshotAnswerRows": 180,
+          "scoreBatches": 3,
+          "scoreRows": 90,
+          "queryGroups": {
+            "SELECT session_questions": 9,
+            "START transaction": 90,
+            "SELECT game_sessions": 90,
+            "WITH answers": 90,
+            "COMMIT transaction": 90,
+            "SELECT session_participants": 3,
+            "SELECT answers": 3,
+            "SELECT game_results": 3,
+            "UPDATE session_questions": 3,
+            "UPDATE answers": 3
+          }
+        },
+        "deadline:REVIEW": {
+          "operations": 3,
+          "queries": 45,
+          "queriesPerOperation": {
+            "count": 3,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 3,
+            "p50": 181.31,
+            "p95": 316.22,
+            "p99": 316.22,
+            "max": 316.22
+          },
+          "queueMs": {
+            "count": 3,
+            "p50": 0.04,
+            "p95": 0.06,
+            "p99": 0.06,
+            "max": 0.06
+          },
+          "sqlMs": {
+            "count": 3,
+            "p50": 162.02,
+            "p95": 299.75,
+            "p99": 299.75,
+            "max": 299.75
+          },
+          "artificialMs": 0,
+          "snapshots": 6,
+          "snapshotAnswerRows": 360,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 3,
+            "SELECT game_sessions": 6,
+            "SELECT session_questions": 8,
+            "SELECT session_participants": 6,
+            "SELECT answers": 6,
+            "SELECT game_results": 6,
+            "UPDATE game_sessions": 3,
+            "UPDATE session_questions": 2,
+            "COMMIT transaction": 3,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [],
+      "cleaned": true,
+      "elapsedMs": 30096
+    },
+    {
+      "name": "30x30",
+      "questions": 30,
+      "play": 30,
+      "latencyMs": 0,
+      "repetition": 1,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": false,
+      "invariants": {
+        "choices": false,
+        "dates": false,
+        "scores": true,
+        "stableClosedScores": false,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "FAIL",
+      "ackMs": {
+        "count": 900,
+        "p50": 272.86,
+        "p95": 8004.29,
+        "p99": 8010.03,
+        "max": 8013.29
+      },
+      "overBudget": 60,
+      "rejected": 60,
+      "timeouts": 60,
+      "participants": 30,
+      "persistedAnswers": 900,
+      "results": 30,
+      "uniqueReceipts": 840,
+      "peakConcurrentCommands": 31,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 870,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 927,
+        "queries": 4256,
+        "queriesPerOperation": {
+          "count": 927,
+          "p50": 4,
+          "p95": 11,
+          "p99": 15,
+          "max": 15
+        },
+        "durationMs": {
+          "count": 927,
+          "p50": 251.22,
+          "p95": 12798.03,
+          "p99": 44359.06,
+          "max": 46530.85
+        },
+        "queueMs": {
+          "count": 927,
+          "p50": 233.57,
+          "p95": 12639.83,
+          "p99": 44216.11,
+          "max": 46442.99
+        },
+        "sqlMs": {
+          "count": 927,
+          "p50": 12.95,
+          "p95": 152.66,
+          "p99": 1771.74,
+          "max": 21997.7
+        },
+        "artificialMs": 0,
+        "snapshots": 84,
+        "snapshotAnswerRows": 40710,
+        "scoreBatches": 30,
+        "scoreRows": 900,
+        "queryGroups": {
+          "START transaction": 927,
+          "SELECT game_sessions": 958,
+          "SELECT session_questions": 169,
+          "SELECT session_participants": 84,
+          "SELECT answers": 84,
+          "SELECT game_results": 84,
+          "UPDATE game_sessions": 31,
+          "UPDATE session_questions": 60,
+          "COMMIT transaction": 927,
+          "WITH answers": 900,
+          "UPDATE answers": 30,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 61.6,
+            "p95": 61.6,
+            "p99": 61.6,
+            "max": 61.6
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.25,
+            "p95": 0.25,
+            "p99": 0.25,
+            "max": 0.25
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 41.73,
+            "p95": 41.73,
+            "p99": 41.73,
+            "max": 41.73
+          },
+          "artificialMs": 0,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 900,
+          "queries": 3855,
+          "queriesPerOperation": {
+            "count": 900,
+            "p50": 4,
+            "p95": 5,
+            "p99": 11,
+            "max": 14
+          },
+          "durationMs": {
+            "count": 900,
+            "p50": 256.96,
+            "p95": 12798.03,
+            "p99": 44359.06,
+            "max": 46530.85
+          },
+          "queueMs": {
+            "count": 900,
+            "p50": 241.22,
+            "p95": 12639.83,
+            "p99": 44216.11,
+            "max": 46442.99
+          },
+          "sqlMs": {
+            "count": 900,
+            "p50": 12.64,
+            "p95": 152.66,
+            "p99": 1771.74,
+            "max": 21997.7
+          },
+          "artificialMs": 0,
+          "snapshots": 30,
+          "snapshotAnswerRows": 13950,
+          "scoreBatches": 30,
+          "scoreRows": 900,
+          "queryGroups": {
+            "SELECT session_questions": 90,
+            "START transaction": 900,
+            "SELECT game_sessions": 905,
+            "WITH answers": 900,
+            "COMMIT transaction": 900,
+            "SELECT session_participants": 30,
+            "SELECT answers": 30,
+            "SELECT game_results": 30,
+            "UPDATE game_sessions": 5,
+            "UPDATE session_questions": 35,
+            "UPDATE answers": 30
+          }
+        },
+        "deadline:REVIEW": {
+          "operations": 25,
+          "queries": 375,
+          "queriesPerOperation": {
+            "count": 25,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 25,
+            "p50": 79.75,
+            "p95": 152.03,
+            "p99": 183,
+            "max": 183
+          },
+          "queueMs": {
+            "count": 25,
+            "p50": 0.04,
+            "p95": 0.11,
+            "p99": 0.12,
+            "max": 0.12
+          },
+          "sqlMs": {
+            "count": 25,
+            "p50": 51.58,
+            "p95": 109.24,
+            "p99": 146.27,
+            "max": 146.27
+          },
+          "artificialMs": 0,
+          "snapshots": 50,
+          "snapshotAnswerRows": 26520,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 25,
+            "SELECT game_sessions": 50,
+            "SELECT session_questions": 74,
+            "SELECT session_participants": 50,
+            "SELECT answers": 50,
+            "SELECT game_results": 50,
+            "UPDATE game_sessions": 25,
+            "UPDATE session_questions": 24,
+            "COMMIT transaction": 25,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1
+          }
+        },
+        "deadline:ANSWER": {
+          "operations": 1,
+          "queries": 11,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 11,
+            "p95": 11,
+            "p99": 11,
+            "max": 11
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 16612.56,
+            "p95": 16612.56,
+            "p99": 16612.56,
+            "max": 16612.56
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 16316.55,
+            "p95": 16316.55,
+            "p99": 16316.55,
+            "max": 16316.55
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 283.4,
+            "p95": 283.4,
+            "p99": 283.4,
+            "max": 283.4
+          },
+          "artificialMs": 0,
+          "snapshots": 2,
+          "snapshotAnswerRows": 240,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 1,
+            "SELECT session_questions": 2,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "COMMIT transaction": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [
+        {
+          "player": 7,
+          "question": 3,
+          "ms": 8005.359700000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 8,
+          "question": 3,
+          "ms": 8005.308599999989,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 9,
+          "question": 3,
+          "ms": 8005.236499999999,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 10,
+          "question": 3,
+          "ms": 8005.152600000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 11,
+          "question": 3,
+          "ms": 8005.089399999997,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 12,
+          "question": 3,
+          "ms": 8005.0102999999945,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 13,
+          "question": 3,
+          "ms": 8004.932000000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 14,
+          "question": 3,
+          "ms": 8004.839600000007,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 15,
+          "question": 3,
+          "ms": 8004.930699999997,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 16,
+          "question": 3,
+          "ms": 8004.874400000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 17,
+          "question": 3,
+          "ms": 8004.810499999992,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 18,
+          "question": 3,
+          "ms": 8004.716800000009,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 19,
+          "question": 3,
+          "ms": 8004.642800000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 20,
+          "question": 3,
+          "ms": 8004.537299999996,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 21,
+          "question": 3,
+          "ms": 8004.4516,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 22,
+          "question": 3,
+          "ms": 8004.379000000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 23,
+          "question": 3,
+          "ms": 8004.292100000006,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 24,
+          "question": 3,
+          "ms": 8004.108300000007,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 25,
+          "question": 3,
+          "ms": 8003.966,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 26,
+          "question": 3,
+          "ms": 8003.830799999996,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 27,
+          "question": 3,
+          "ms": 8003.699199999988,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 28,
+          "question": 3,
+          "ms": 8003.536500000002,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 29,
+          "question": 3,
+          "ms": 8003.4158000000025,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 24,
+          "question": 4,
+          "ms": 8009.176300000021,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 25,
+          "question": 4,
+          "ms": 8009.11440000002,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 26,
+          "question": 4,
+          "ms": 8009.051599999977,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 27,
+          "question": 4,
+          "ms": 8008.956000000006,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 28,
+          "question": 4,
+          "ms": 8008.9136,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 29,
+          "question": 4,
+          "ms": 8008.912899999996,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 28,
+          "question": 5,
+          "ms": 8005.835800000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 29,
+          "question": 5,
+          "ms": 8005.842299999989,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 1,
+          "question": 6,
+          "ms": 8013.28839999999,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 2,
+          "question": 6,
+          "ms": 8012.704300000012,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 3,
+          "question": 6,
+          "ms": 8012.30780000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 4,
+          "question": 6,
+          "ms": 8012.065600000002,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 5,
+          "question": 6,
+          "ms": 8011.802800000005,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 6,
+          "question": 6,
+          "ms": 8011.394400000019,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 7,
+          "question": 6,
+          "ms": 8011.089399999997,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 8,
+          "question": 6,
+          "ms": 8010.670000000013,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 9,
+          "question": 6,
+          "ms": 8010.3315,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 10,
+          "question": 6,
+          "ms": 8010.0288,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 11,
+          "question": 6,
+          "ms": 8009.702099999995,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 12,
+          "question": 6,
+          "ms": 8009.445399999997,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 13,
+          "question": 6,
+          "ms": 8008.955300000001,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 14,
+          "question": 6,
+          "ms": 8008.423999999999,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 15,
+          "question": 6,
+          "ms": 8007.732400000008,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 16,
+          "question": 6,
+          "ms": 8007.193500000023,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 17,
+          "question": 6,
+          "ms": 8006.650400000013,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 18,
+          "question": 6,
+          "ms": 8006.137099999993,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 19,
+          "question": 6,
+          "ms": 8005.553600000014,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 20,
+          "question": 6,
+          "ms": 8004.986399999994,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 21,
+          "question": 6,
+          "ms": 8004.470499999996,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 22,
+          "question": 6,
+          "ms": 8004.080699999991,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 23,
+          "question": 6,
+          "ms": 8003.580500000011,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 24,
+          "question": 6,
+          "ms": 8003.065000000002,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 25,
+          "question": 6,
+          "ms": 8002.666999999987,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 26,
+          "question": 6,
+          "ms": 8002.157800000015,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 27,
+          "question": 6,
+          "ms": 8001.71179999999,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 28,
+          "question": 6,
+          "ms": 8001.189000000013,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 29,
+          "question": 6,
+          "ms": 8000.708400000003,
+          "ok": false,
+          "code": "TIMEOUT"
+        }
+      ],
+      "cleaned": true,
+      "elapsedMs": 185820
+    },
+    {
+      "name": "30x30",
+      "questions": 30,
+      "play": 30,
+      "latencyMs": 0,
+      "repetition": 2,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": true,
+      "invariants": {
+        "choices": true,
+        "dates": true,
+        "scores": true,
+        "stableClosedScores": true,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "PASS",
+      "ackMs": {
+        "count": 900,
+        "p50": 279.88,
+        "p95": 700.95,
+        "p99": 941.87,
+        "max": 1134.56
+      },
+      "overBudget": 0,
+      "rejected": 0,
+      "timeouts": 0,
+      "participants": 30,
+      "persistedAnswers": 900,
+      "results": 30,
+      "uniqueReceipts": 900,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 870,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 931,
+        "queries": 4305,
+        "queriesPerOperation": {
+          "count": 931,
+          "p50": 4,
+          "p95": 11,
+          "p99": 15,
+          "max": 15
+        },
+        "durationMs": {
+          "count": 931,
+          "p50": 252.47,
+          "p95": 672.74,
+          "p99": 910.52,
+          "max": 1110.65
+        },
+        "queueMs": {
+          "count": 931,
+          "p50": 238.25,
+          "p95": 628.89,
+          "p99": 881.76,
+          "max": 1024.24
+        },
+        "sqlMs": {
+          "count": 931,
+          "p50": 16.39,
+          "p95": 46.16,
+          "p99": 95.7,
+          "max": 196.21
+        },
+        "artificialMs": 0,
+        "snapshots": 92,
+        "snapshotAnswerRows": 41850,
+        "scoreBatches": 30,
+        "scoreRows": 900,
+        "queryGroups": {
+          "START transaction": 931,
+          "SELECT game_sessions": 962,
+          "SELECT session_questions": 182,
+          "SELECT session_participants": 92,
+          "SELECT answers": 92,
+          "SELECT game_results": 92,
+          "UPDATE game_sessions": 31,
+          "UPDATE session_questions": 60,
+          "COMMIT transaction": 931,
+          "WITH answers": 900,
+          "UPDATE answers": 30,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 57.5,
+            "p95": 57.5,
+            "p99": 57.5,
+            "max": 57.5
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.23,
+            "p95": 0.23,
+            "p99": 0.23,
+            "max": 0.23
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 38.4,
+            "p95": 38.4,
+            "p99": 38.4,
+            "max": 38.4
+          },
+          "artificialMs": 0,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 900,
+          "queries": 3840,
+          "queriesPerOperation": {
+            "count": 900,
+            "p50": 4,
+            "p95": 5,
+            "p99": 11,
+            "max": 11
+          },
+          "durationMs": {
+            "count": 900,
+            "p50": 262.67,
+            "p95": 680.64,
+            "p99": 910.52,
+            "max": 1110.65
+          },
+          "queueMs": {
+            "count": 900,
+            "p50": 246.05,
+            "p95": 633.15,
+            "p99": 881.76,
+            "max": 1024.24
+          },
+          "sqlMs": {
+            "count": 900,
+            "p50": 15.71,
+            "p95": 40.15,
+            "p99": 57.48,
+            "max": 162.39
+          },
+          "artificialMs": 0,
+          "snapshots": 30,
+          "snapshotAnswerRows": 13950,
+          "scoreBatches": 30,
+          "scoreRows": 900,
+          "queryGroups": {
+            "SELECT session_questions": 90,
+            "START transaction": 900,
+            "SELECT game_sessions": 900,
+            "WITH answers": 900,
+            "COMMIT transaction": 900,
+            "SELECT session_participants": 30,
+            "SELECT answers": 30,
+            "SELECT game_results": 30,
+            "UPDATE session_questions": 30,
+            "UPDATE answers": 30
+          }
+        },
+        "deadline:REVIEW": {
+          "operations": 30,
+          "queries": 450,
+          "queriesPerOperation": {
+            "count": 30,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 30,
+            "p50": 84.73,
+            "p95": 209.43,
+            "p99": 249.65,
+            "max": 249.65
+          },
+          "queueMs": {
+            "count": 30,
+            "p50": 0.05,
+            "p95": 0.13,
+            "p99": 0.21,
+            "max": 0.21
+          },
+          "sqlMs": {
+            "count": 30,
+            "p50": 56.04,
+            "p95": 144.72,
+            "p99": 196.21,
+            "max": 196.21
+          },
+          "artificialMs": 0,
+          "snapshots": 60,
+          "snapshotAnswerRows": 27900,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 30,
+            "SELECT game_sessions": 60,
+            "SELECT session_questions": 89,
+            "SELECT session_participants": 60,
+            "SELECT answers": 60,
+            "SELECT game_results": 60,
+            "UPDATE game_sessions": 30,
+            "UPDATE session_questions": 29,
+            "COMMIT transaction": 30,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [],
+      "cleaned": true,
+      "elapsedMs": 116573
+    },
+    {
+      "name": "20ms",
+      "questions": 30,
+      "play": 2,
+      "latencyMs": 20,
+      "repetition": 1,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": true,
+      "invariants": {
+        "choices": true,
+        "dates": true,
+        "scores": true,
+        "stableClosedScores": true,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "PASS",
+      "ackMs": {
+        "count": 60,
+        "p50": 2059.14,
+        "p95": 3762.67,
+        "p99": 4300.75,
+        "max": 4300.75
+      },
+      "overBudget": 0,
+      "rejected": 0,
+      "timeouts": 0,
+      "participants": 30,
+      "persistedAnswers": 60,
+      "results": 30,
+      "uniqueReceipts": 60,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 58,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 62,
+        "queries": 294,
+        "queriesPerOperation": {
+          "count": 62,
+          "p50": 4,
+          "p95": 14,
+          "p99": 17,
+          "max": 17
+        },
+        "durationMs": {
+          "count": 62,
+          "p50": 1956.49,
+          "p95": 3746.44,
+          "p99": 4277.12,
+          "max": 4277.12
+        },
+        "queueMs": {
+          "count": 62,
+          "p50": 1823.99,
+          "p95": 3583.69,
+          "p99": 3872.11,
+          "max": 3872.11
+        },
+        "sqlMs": {
+          "count": 62,
+          "p50": 127.59,
+          "p95": 417.76,
+          "p99": 577.24,
+          "max": 577.24
+        },
+        "artificialMs": 5880,
+        "snapshots": 6,
+        "snapshotAnswerRows": 210,
+        "scoreBatches": 2,
+        "scoreRows": 60,
+        "queryGroups": {
+          "START transaction": 62,
+          "SELECT game_sessions": 66,
+          "SELECT session_questions": 12,
+          "SELECT session_participants": 6,
+          "SELECT answers": 6,
+          "SELECT game_results": 6,
+          "UPDATE game_sessions": 4,
+          "UPDATE session_questions": 6,
+          "COMMIT transaction": 62,
+          "WITH answers": 60,
+          "UPDATE answers": 2,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 440.72,
+            "p95": 440.72,
+            "p99": 440.72,
+            "max": 440.72
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.25,
+            "p95": 0.25,
+            "p99": 0.25,
+            "max": 0.25
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 417.76,
+            "p95": 417.76,
+            "p99": 417.76,
+            "max": 417.76
+          },
+          "artificialMs": 300,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 60,
+          "queries": 262,
+          "queriesPerOperation": {
+            "count": 60,
+            "p50": 4,
+            "p95": 5,
+            "p99": 14,
+            "max": 14
+          },
+          "durationMs": {
+            "count": 60,
+            "p50": 2038.95,
+            "p95": 3746.44,
+            "p99": 4277.12,
+            "max": 4277.12
+          },
+          "queueMs": {
+            "count": 60,
+            "p50": 1907.34,
+            "p95": 3583.69,
+            "p99": 3872.11,
+            "max": 3872.11
+          },
+          "sqlMs": {
+            "count": 60,
+            "p50": 126.02,
+            "p95": 159.44,
+            "p99": 457.25,
+            "max": 457.25
+          },
+          "artificialMs": 5240,
+          "snapshots": 2,
+          "snapshotAnswerRows": 90,
+          "scoreBatches": 2,
+          "scoreRows": 60,
+          "queryGroups": {
+            "SELECT session_questions": 6,
+            "START transaction": 60,
+            "SELECT game_sessions": 62,
+            "WITH answers": 60,
+            "COMMIT transaction": 60,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 2,
+            "UPDATE session_questions": 4,
+            "UPDATE answers": 2
+          }
+        },
+        "finish": {
+          "operations": 1,
+          "queries": 17,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 17,
+            "p95": 17,
+            "p99": 17,
+            "max": 17
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 606.61,
+            "p95": 606.61,
+            "p99": 606.61,
+            "max": 606.61
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.03,
+            "p95": 0.03,
+            "p99": 0.03,
+            "max": 0.03
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 577.24,
+            "p95": 577.24,
+            "p99": 577.24,
+            "max": 577.24
+          },
+          "artificialMs": 340,
+          "snapshots": 2,
+          "snapshotAnswerRows": 120,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1,
+            "COMMIT transaction": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [],
+      "cleaned": true,
+      "elapsedMs": 23914
+    },
+    {
+      "name": "20ms",
+      "questions": 30,
+      "play": 2,
+      "latencyMs": 20,
+      "repetition": 2,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": true,
+      "invariants": {
+        "choices": true,
+        "dates": true,
+        "scores": true,
+        "stableClosedScores": true,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "PASS",
+      "ackMs": {
+        "count": 60,
+        "p50": 1981.36,
+        "p95": 3774.7,
+        "p99": 4338.96,
+        "max": 4338.96
+      },
+      "overBudget": 0,
+      "rejected": 0,
+      "timeouts": 0,
+      "participants": 30,
+      "persistedAnswers": 60,
+      "results": 30,
+      "uniqueReceipts": 60,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 58,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 62,
+        "queries": 294,
+        "queriesPerOperation": {
+          "count": 62,
+          "p50": 4,
+          "p95": 14,
+          "p99": 17,
+          "max": 17
+        },
+        "durationMs": {
+          "count": 62,
+          "p50": 1942.09,
+          "p95": 3748.81,
+          "p99": 4294.53,
+          "max": 4294.53
+        },
+        "queueMs": {
+          "count": 62,
+          "p50": 1827.79,
+          "p95": 3577.96,
+          "p99": 3869.14,
+          "max": 3869.14
+        },
+        "sqlMs": {
+          "count": 62,
+          "p50": 126.48,
+          "p95": 436.99,
+          "p99": 609.21,
+          "max": 609.21
+        },
+        "artificialMs": 5880,
+        "snapshots": 6,
+        "snapshotAnswerRows": 210,
+        "scoreBatches": 2,
+        "scoreRows": 60,
+        "queryGroups": {
+          "START transaction": 62,
+          "SELECT game_sessions": 66,
+          "SELECT session_questions": 12,
+          "SELECT session_participants": 6,
+          "SELECT answers": 6,
+          "SELECT game_results": 6,
+          "UPDATE game_sessions": 4,
+          "UPDATE session_questions": 6,
+          "COMMIT transaction": 62,
+          "WITH answers": 60,
+          "UPDATE answers": 2,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 478.77,
+            "p95": 478.77,
+            "p99": 478.77,
+            "max": 478.77
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.23,
+            "p95": 0.23,
+            "p99": 0.23,
+            "max": 0.23
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 456.6,
+            "p95": 456.6,
+            "p99": 456.6,
+            "max": 456.6
+          },
+          "artificialMs": 300,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 60,
+          "queries": 262,
+          "queriesPerOperation": {
+            "count": 60,
+            "p50": 4,
+            "p95": 5,
+            "p99": 14,
+            "max": 14
+          },
+          "durationMs": {
+            "count": 60,
+            "p50": 1958.9,
+            "p95": 3748.81,
+            "p99": 4294.53,
+            "max": 4294.53
+          },
+          "queueMs": {
+            "count": 60,
+            "p50": 1834.75,
+            "p95": 3577.96,
+            "p99": 3869.14,
+            "max": 3869.14
+          },
+          "sqlMs": {
+            "count": 60,
+            "p50": 126.05,
+            "p95": 154.96,
+            "p99": 437.58,
+            "max": 437.58
+          },
+          "artificialMs": 5240,
+          "snapshots": 2,
+          "snapshotAnswerRows": 90,
+          "scoreBatches": 2,
+          "scoreRows": 60,
+          "queryGroups": {
+            "SELECT session_questions": 6,
+            "START transaction": 60,
+            "SELECT game_sessions": 62,
+            "WITH answers": 60,
+            "COMMIT transaction": 60,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 2,
+            "UPDATE session_questions": 4,
+            "UPDATE answers": 2
+          }
+        },
+        "finish": {
+          "operations": 1,
+          "queries": 17,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 17,
+            "p95": 17,
+            "p99": 17,
+            "max": 17
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 636.5,
+            "p95": 636.5,
+            "p99": 636.5,
+            "max": 636.5
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.04,
+            "p95": 0.04,
+            "p99": 0.04,
+            "max": 0.04
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 609.21,
+            "p95": 609.21,
+            "p99": 609.21,
+            "max": 609.21
+          },
+          "artificialMs": 340,
+          "snapshots": 2,
+          "snapshotAnswerRows": 120,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1,
+            "COMMIT transaction": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [],
+      "cleaned": true,
+      "elapsedMs": 23001
+    },
+    {
+      "name": "50ms",
+      "questions": 30,
+      "play": 2,
+      "latencyMs": 50,
+      "repetition": 1,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": false,
+      "invariants": {
+        "choices": false,
+        "dates": false,
+        "scores": true,
+        "stableClosedScores": false,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "FAIL",
+      "ackMs": {
+        "count": 60,
+        "p50": 3918.01,
+        "p95": 7205.02,
+        "p99": 8004.45,
+        "max": 8004.45
+      },
+      "overBudget": 2,
+      "rejected": 2,
+      "timeouts": 2,
+      "participants": 30,
+      "persistedAnswers": 60,
+      "results": 30,
+      "uniqueReceipts": 58,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 58,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 62,
+        "queries": 294,
+        "queriesPerOperation": {
+          "count": 62,
+          "p50": 4,
+          "p95": 14,
+          "p99": 17,
+          "max": 17
+        },
+        "durationMs": {
+          "count": 62,
+          "p50": 3696.24,
+          "p95": 7174.13,
+          "p99": 8219.43,
+          "max": 8219.43
+        },
+        "queueMs": {
+          "count": 62,
+          "p50": 3463.98,
+          "p95": 6920.76,
+          "p99": 7383.34,
+          "max": 7383.34
+        },
+        "sqlMs": {
+          "count": 62,
+          "p50": 248.92,
+          "p95": 865.08,
+          "p99": 1031.06,
+          "max": 1031.06
+        },
+        "artificialMs": 14700,
+        "snapshots": 6,
+        "snapshotAnswerRows": 210,
+        "scoreBatches": 2,
+        "scoreRows": 60,
+        "queryGroups": {
+          "START transaction": 62,
+          "SELECT game_sessions": 66,
+          "SELECT session_questions": 12,
+          "SELECT session_participants": 6,
+          "SELECT answers": 6,
+          "SELECT game_results": 6,
+          "UPDATE game_sessions": 4,
+          "UPDATE session_questions": 6,
+          "COMMIT transaction": 62,
+          "WITH answers": 60,
+          "UPDATE answers": 2,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 929.06,
+            "p95": 929.06,
+            "p99": 929.06,
+            "max": 929.06
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.22,
+            "p95": 0.22,
+            "p99": 0.22,
+            "max": 0.22
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 898.3,
+            "p95": 898.3,
+            "p99": 898.3,
+            "max": 898.3
+          },
+          "artificialMs": 750,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 60,
+          "queries": 262,
+          "queriesPerOperation": {
+            "count": 60,
+            "p50": 4,
+            "p95": 5,
+            "p99": 14,
+            "max": 14
+          },
+          "durationMs": {
+            "count": 60,
+            "p50": 3889.59,
+            "p95": 7174.13,
+            "p99": 8219.43,
+            "max": 8219.43
+          },
+          "queueMs": {
+            "count": 60,
+            "p50": 3643.57,
+            "p95": 6920.76,
+            "p99": 7383.34,
+            "max": 7383.34
+          },
+          "sqlMs": {
+            "count": 60,
+            "p50": 248.61,
+            "p95": 298.05,
+            "p99": 867.03,
+            "max": 867.03
+          },
+          "artificialMs": 13100,
+          "snapshots": 2,
+          "snapshotAnswerRows": 90,
+          "scoreBatches": 2,
+          "scoreRows": 60,
+          "queryGroups": {
+            "SELECT session_questions": 6,
+            "START transaction": 60,
+            "SELECT game_sessions": 62,
+            "WITH answers": 60,
+            "COMMIT transaction": 60,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 2,
+            "UPDATE session_questions": 4,
+            "UPDATE answers": 2
+          }
+        },
+        "finish": {
+          "operations": 1,
+          "queries": 17,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 17,
+            "p95": 17,
+            "p99": 17,
+            "max": 17
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 1100.07,
+            "p95": 1100.07,
+            "p99": 1100.07,
+            "max": 1100.07
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 32.11,
+            "p95": 32.11,
+            "p99": 32.11,
+            "max": 32.11
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 1031.06,
+            "p95": 1031.06,
+            "p99": 1031.06,
+            "max": 1031.06
+          },
+          "artificialMs": 850,
+          "snapshots": 2,
+          "snapshotAnswerRows": 120,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1,
+            "COMMIT transaction": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [
+        {
+          "player": 29,
+          "question": 0,
+          "ms": 8004.453299999994,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 29,
+          "question": 1,
+          "ms": 8001.021400000027,
+          "ok": false,
+          "code": "TIMEOUT"
+        }
+      ],
+      "cleaned": true,
+      "elapsedMs": 32248
+    },
+    {
+      "name": "50ms",
+      "questions": 30,
+      "play": 2,
+      "latencyMs": 50,
+      "repetition": 2,
+      "ackBudgetMs": 8000,
+      "players": 30,
+      "responseWindowSeconds": 30,
+      "integrity": false,
+      "invariants": {
+        "choices": false,
+        "dates": false,
+        "scores": true,
+        "stableClosedScores": false,
+        "ranking": true,
+        "history": true
+      },
+      "structural": true,
+      "status": "FAIL",
+      "ackMs": {
+        "count": 60,
+        "p50": 4020.48,
+        "p95": 7393.79,
+        "p99": 8018.61,
+        "max": 8018.61
+      },
+      "overBudget": 2,
+      "rejected": 2,
+      "timeouts": 2,
+      "participants": 30,
+      "persistedAnswers": 60,
+      "results": 30,
+      "uniqueReceipts": 58,
+      "peakConcurrentCommands": 30,
+      "activeAtRead": 0,
+      "normalQueries": {
+        "count": 58,
+        "p50": 4,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "total": {
+        "operations": 62,
+        "queries": 294,
+        "queriesPerOperation": {
+          "count": 62,
+          "p50": 4,
+          "p95": 14,
+          "p99": 17,
+          "max": 17
+        },
+        "durationMs": {
+          "count": 62,
+          "p50": 3875.31,
+          "p95": 7354.42,
+          "p99": 8442.92,
+          "max": 8442.92
+        },
+        "queueMs": {
+          "count": 62,
+          "p50": 3619.98,
+          "p95": 7092.89,
+          "p99": 7594.9,
+          "max": 7594.9
+        },
+        "sqlMs": {
+          "count": 62,
+          "p50": 249.21,
+          "p95": 876.66,
+          "p99": 1080.68,
+          "max": 1080.68
+        },
+        "artificialMs": 14700,
+        "snapshots": 6,
+        "snapshotAnswerRows": 210,
+        "scoreBatches": 2,
+        "scoreRows": 60,
+        "queryGroups": {
+          "START transaction": 62,
+          "SELECT game_sessions": 66,
+          "SELECT session_questions": 12,
+          "SELECT session_participants": 6,
+          "SELECT answers": 6,
+          "SELECT game_results": 6,
+          "UPDATE game_sessions": 4,
+          "UPDATE session_questions": 6,
+          "COMMIT transaction": 62,
+          "WITH answers": 60,
+          "UPDATE answers": 2,
+          "INSERT game_results": 1,
+          "DELETE active_session_memberships": 1
+        }
+      },
+      "byPhase": {
+        "start": {
+          "operations": 1,
+          "queries": 15,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 15,
+            "p95": 15,
+            "p99": 15,
+            "max": 15
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 992.16,
+            "p95": 992.16,
+            "p99": 992.16,
+            "max": 992.16
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 0.23,
+            "p95": 0.23,
+            "p99": 0.23,
+            "max": 0.23
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 946.29,
+            "p95": 946.29,
+            "p99": 946.29,
+            "max": 946.29
+          },
+          "artificialMs": 750,
+          "snapshots": 2,
+          "snapshotAnswerRows": 0,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "COMMIT transaction": 1
+          }
+        },
+        "answer": {
+          "operations": 60,
+          "queries": 262,
+          "queriesPerOperation": {
+            "count": 60,
+            "p50": 4,
+            "p95": 5,
+            "p99": 14,
+            "max": 14
+          },
+          "durationMs": {
+            "count": 60,
+            "p50": 4002.63,
+            "p95": 7354.42,
+            "p99": 8442.92,
+            "max": 8442.92
+          },
+          "queueMs": {
+            "count": 60,
+            "p50": 3769.46,
+            "p95": 7092.89,
+            "p99": 7594.9,
+            "max": 7594.9
+          },
+          "sqlMs": {
+            "count": 60,
+            "p50": 246.68,
+            "p95": 331.48,
+            "p99": 899.79,
+            "max": 899.79
+          },
+          "artificialMs": 13100,
+          "snapshots": 2,
+          "snapshotAnswerRows": 90,
+          "scoreBatches": 2,
+          "scoreRows": 60,
+          "queryGroups": {
+            "SELECT session_questions": 6,
+            "START transaction": 60,
+            "SELECT game_sessions": 62,
+            "WITH answers": 60,
+            "COMMIT transaction": 60,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 2,
+            "UPDATE session_questions": 4,
+            "UPDATE answers": 2
+          }
+        },
+        "finish": {
+          "operations": 1,
+          "queries": 17,
+          "queriesPerOperation": {
+            "count": 1,
+            "p50": 17,
+            "p95": 17,
+            "p99": 17,
+            "max": 17
+          },
+          "durationMs": {
+            "count": 1,
+            "p50": 1213.43,
+            "p95": 1213.43,
+            "p99": 1213.43,
+            "max": 1213.43
+          },
+          "queueMs": {
+            "count": 1,
+            "p50": 81.17,
+            "p95": 81.17,
+            "p99": 81.17,
+            "max": 81.17
+          },
+          "sqlMs": {
+            "count": 1,
+            "p50": 1080.68,
+            "p95": 1080.68,
+            "p99": 1080.68,
+            "max": 1080.68
+          },
+          "artificialMs": 850,
+          "snapshots": 2,
+          "snapshotAnswerRows": 120,
+          "scoreBatches": 0,
+          "scoreRows": 0,
+          "queryGroups": {
+            "START transaction": 1,
+            "SELECT game_sessions": 2,
+            "SELECT session_questions": 3,
+            "SELECT session_participants": 2,
+            "SELECT answers": 2,
+            "SELECT game_results": 2,
+            "UPDATE game_sessions": 1,
+            "UPDATE session_questions": 1,
+            "INSERT game_results": 1,
+            "DELETE active_session_memberships": 1,
+            "COMMIT transaction": 1
+          }
+        }
+      },
+      "postgres": [
+        {
+          "server_version": "17.11"
+        }
+      ],
+      "failures": [],
+      "errors": [
+        {
+          "player": 29,
+          "question": 0,
+          "ms": 8018.611399999994,
+          "ok": false,
+          "code": "TIMEOUT"
+        },
+        {
+          "player": 29,
+          "question": 1,
+          "ms": 8007.376800000027,
+          "ok": false,
+          "code": "TIMEOUT"
+        }
+      ],
+      "cleaned": true,
+      "elapsedMs": 32477
+    }
+  ]
+}

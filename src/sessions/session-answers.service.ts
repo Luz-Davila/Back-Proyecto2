@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { GameTelemetry } from './game-telemetry';
 import type { AuthenticatedUser } from '../auth/auth.service';
-import { Answer } from './answer.entity';
+import { SessionAdmissions } from './session-admissions';
 import { SessionsRepository } from './sessions.repository';
 import { SessionClock } from './session.clock';
 import {
@@ -19,6 +19,7 @@ export class SessionAnswersService {
   constructor(
     private readonly repository: SessionsRepository,
     private readonly clock: SessionClock,
+    private readonly admissions: SessionAdmissions,
     @Optional() private readonly telemetry?: GameTelemetry,
   ) {}
 
@@ -27,7 +28,18 @@ export class SessionAnswersService {
     input: SubmitAnswerInput,
   ): Promise<AnswerReceipt> {
     try {
-      return await this.accept(user, input);
+      return await this.admissions.run(
+        input.sessionQuestionId,
+        () => this.repository.sessionForQuestion(input.sessionQuestionId),
+        async (admission) =>
+          this.accept(
+            user,
+            input,
+            await admission.resolveSession(),
+            admission.answeredAt,
+            admission.waitMs,
+          ),
+      );
     } catch (error) {
       this.telemetry?.answerFailed(error);
       throw error;
@@ -37,19 +49,30 @@ export class SessionAnswersService {
   private async accept(
     user: AuthenticatedUser,
     input: SubmitAnswerInput,
+    sessionId: string,
+    answeredAt: Date,
+    previousWaitMs: number,
   ): Promise<AnswerReceipt> {
-    const sessionId = await this.repository.sessionForQuestion(
-      input.sessionQuestionId,
-    );
     // A unique violation aborts the transaction. Recover only that constraint,
     // by revalidating the winning row under a fresh transaction/room lock.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const result = await this.repository.locked(
-          { id: sessionId },
-          async (manager, session) => {
-            const aggregate = await this.repository.snapshot(manager, session);
-            const { participant, existing, question } = authorizeAnswer(
+        const result = await this.repository.answerLocked<{
+          receipt: AnswerReceipt;
+          disposition: 'accepted' | 'replayed';
+        }>(
+          sessionId,
+          input.sessionQuestionId,
+          user.id,
+          async (manager, context) => {
+            const aggregate = {
+              session: context.session,
+              questions: [context.question],
+              participants: context.participant ? [context.participant] : [],
+              answers: context.existing ? [context.existing] : [],
+              results: [],
+            };
+            const { existing, question } = authorizeAnswer(
               aggregate,
               user.id,
               input,
@@ -67,33 +90,42 @@ export class SessionAnswersService {
             }
             if (existing)
               return {
-                receipt: answerReceipt(existing),
-                disposition: 'replayed' as const,
+                value: {
+                  receipt: answerReceipt(existing),
+                  disposition: 'replayed' as const,
+                },
               };
-            const now = this.clock.now();
-            requireAnswerWindow(aggregate, input, now);
-            const answer = await manager.save(
-              Answer,
-              manager.create(Answer, {
-                sessionQuestionId: input.sessionQuestionId,
-                participantId: participant.id,
-                choice: multiple ? null : input.choice,
-                choiceIndex: multiple ? input.choiceIndex : null,
-                answeredAt: now,
-                score: 0,
-              }),
+            requireAnswerWindow(aggregate, input, answeredAt);
+            const inserted = await this.repository.insertAcceptedAnswer(
+              manager,
+              context,
+              input,
+              answeredAt,
             );
-            aggregate.answers.push(answer);
-            if (
-              evaluateAcceptedAnswers(aggregate, input.sessionQuestionId, now)
-            ) {
-              await this.repository.persist(manager, aggregate);
-            }
-            return {
-              receipt: answerReceipt(answer),
+            const value = {
+              receipt: answerReceipt(inserted.answer),
               disposition: 'accepted' as const,
             };
+            if (inserted.complete) {
+              const snapshot = await this.repository.snapshot(
+                manager,
+                context.session,
+              );
+              const before = structuredClone(snapshot);
+              if (
+                evaluateAcceptedAnswers(
+                  snapshot,
+                  input.sessionQuestionId,
+                  this.clock.now(),
+                )
+              ) {
+                await this.repository.persist(manager, snapshot, before);
+                return { value, before, after: snapshot };
+              }
+            }
+            return { value };
           },
+          attempt === 0 ? previousWaitMs : 0,
         );
         this.telemetry?.answer(result.disposition);
         return result.receipt;

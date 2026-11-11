@@ -11,6 +11,11 @@ import { GameTelemetry } from '../../src/sessions/game-telemetry';
 import { StorageService } from '../../src/storage/storage.service';
 import { localGameDatabase } from './local-game-database';
 import { gameMetrics } from './game-metric-reader';
+import { AnswerProfiler } from './answer-profiler';
+import { SessionsRepository } from '../../src/sessions/sessions.repository';
+import { SessionCoordinator } from '../../src/sessions/session-coordinator';
+import { SessionAnswersService } from '../../src/sessions/session-answers.service';
+import { SessionLifecycleService } from '../../src/sessions/session-lifecycle.service';
 
 /** Isolated test entry point. Never imported by the production application. */
 async function main(): Promise<void> {
@@ -56,6 +61,15 @@ async function main(): Promise<void> {
       throw error;
     });
   const app = module.createNestApplication();
+  const profiler =
+    process.env.LOCAL_GAME_PROFILE === '1' ? new AnswerProfiler() : undefined;
+  profiler?.install(
+    ds,
+    app.get(SessionsRepository),
+    app.get(SessionCoordinator),
+    app.get(SessionAnswersService),
+    app.get(SessionLifecycleService),
+  );
   app.useLogger(false);
   let closing: Promise<void> | undefined;
   const close = () =>
@@ -86,6 +100,31 @@ async function main(): Promise<void> {
       void close().catch(() => {
         process.exitCode = 1;
       });
+    if (message.kind === 'profile' && 'id' in message && profiler) {
+      try {
+        if ('action' in message && message.action === 'reset')
+          profiler.reset(
+            'latencyMs' in message ? Number(message.latencyMs) : 0,
+          );
+        process.send?.({ kind: 'profile', id: message.id, ...profiler.read() });
+      } catch {
+        process.send?.({ kind: 'failure', id: message.id });
+      }
+    }
+    if (message.kind === 'hold-next-answer' && 'id' in message && profiler) {
+      const repository = app.get(SessionsRepository);
+      const insert = repository.insertAcceptedAnswer.bind(repository);
+      const id = message.id;
+      repository.insertAcceptedAnswer = async (...args) => {
+        repository.insertAcceptedAnswer = insert;
+        await insert(...args);
+        process.send?.({ kind: 'answer-held', id });
+        // Deliberate crash fixture: INSERT is uncommitted. Only the owned child
+        // is killed by the parent; production has no such hook.
+        return new Promise<never>(() => {});
+      };
+      process.send?.({ kind: 'answer-armed', id });
+    }
     if (message.kind === 'metrics' && 'id' in message) {
       const id = message.id;
       void m.reader

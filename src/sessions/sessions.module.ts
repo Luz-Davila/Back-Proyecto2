@@ -18,6 +18,7 @@ import { SessionsRepository } from './sessions.repository';
 import { SessionsController } from './sessions.controller';
 import { AuthModule } from '../auth/auth.module';
 import { SessionCoordinator } from './session-coordinator';
+import { SessionAdmissions } from './session-admissions';
 import { SessionNotifications } from './session-notifications';
 import { SessionSocketAuthService } from './realtime/session-socket-auth.service';
 import { SessionRealtimeHub } from './realtime/session-realtime.hub';
@@ -39,6 +40,7 @@ import { SessionRecoveryMiddleware } from './session-recovery.middleware';
     SessionStateProjector,
     SessionDeadlinesService,
     SessionCoordinator,
+    SessionAdmissions,
     SessionNotifications,
     SessionSocketAuthService,
     SessionRealtimeHub,

@@ -82,11 +82,82 @@ La prueba local crea procesos distintos con la misma BD. No demuestra reinicio d
 abrupta de energía. No hay pausa o compensación de reloj. Rollback de código conserva datos: clientes
 deben tolerar la ruta ausente y el antiguo rechazo de join FINISHED usando consulta por id/subscribe.
 
-## Métricas y futura conexión a Grafana
+## Métricas y conexión a Grafana Cloud
 
-Se reutiliza OTLP HTTP: `OTEL_EXPORTER_OTLP_ENDPOINT` habilita `<endpoint>/v1/metrics` y
-`<endpoint>/v1/traces`. Sin endpoint la API no exporta. No se agrega /metrics público, otro servidor
-Prometheus ni cuenta/dashboard. Las pruebas usan receptores/exportadores controlados locales.
+Se usa OTLP HTTP. `OTEL_EXPORTER_OTLP_ENDPOINT` es el endpoint base; el SDK agrega `/v1/metrics` y
+`/v1/traces`, salvo que se defina un endpoint específico por señal. Sin endpoint la API no exporta.
+No se agrega `/metrics` público, otro servidor Prometheus ni cuenta/dashboard dentro del backend.
+Las pruebas usan receptores/exportadores controlados locales.
+
+### Métricas HTTP
+
+`HttpMetricsMiddleware` se registra una sola vez de forma global en `AppModule`. Mide desde la entrada
+de la solicitud hasta `finish`; si la conexión se interrumpe antes, registra una sola muestra con estado
+`499`. No usa `originalUrl`, query strings ni cuerpos. Las solicitudes al handshake `/socket.io` se
+excluyen porque son transporte WebSocket, no endpoints REST.
+
+| Instrumento OTel | Tipo/unidad | Atributos permitidos |
+|---|---|---|
+| `profelink.http.server.requests` | Counter `{request}` | `http.request.method`, `http.route`, `http.response.status_code` |
+| `profelink.http.server.request.duration` | Histogram `s` | los mismos tres atributos; buckets explícitos de 5 ms a 10 s |
+
+`http.route` es el patrón registrado, nunca una URL concreta:
+
+```text
+GET /health
+GET /quizzes
+GET /quizzes/:id
+POST /sessions
+GET /sessions/:code/state
+GET unmatched
+```
+
+Si Express no expone un patrón seguro, o si el patrón contiene un UUID/código de sala real, se usa
+`http.route="unmatched"`. Los métodos desconocidos se etiquetan `OTHER`. Cada solicitud genera exactamente
+un Counter y una observación del Histogram, incluso si `finish` y `close` ocurren juntos.
+
+Con la conversión OTLP→Prometheus, los nombres esperados son:
+
+- `profelink_http_server_requests_total{http_request_method,http_route,http_response_status_code}`
+- `profelink_http_server_request_duration_bucket{http_request_method,http_route,http_response_status_code,le}`
+- `profelink_http_server_request_duration_sum` y `profelink_http_server_request_duration_count`
+
+La conversión local se verificó con `@opentelemetry/exporter-prometheus` (puntos, no sufijos inventados).
+Grafana Cloud sigue la misma conversión oficial; si el tenant muestra otro sufijo, comprobar el nombre
+exacto en **Explore → Metrics browser** antes de guardar un panel.
+
+PromQL de ejemplo:
+
+```promql
+# Solicitudes por endpoint
+sum by (http_route) (rate(profelink_http_server_requests_total[5m]))
+
+# Tráfico por método y estado
+sum by (http_request_method, http_response_status_code)
+  (rate(profelink_http_server_requests_total[5m]))
+
+# Latencia P95 por endpoint
+histogram_quantile(0.95,
+  sum by (le, http_route) (
+    rate(profelink_http_server_request_duration_bucket[5m])
+  )
+)
+
+# Porcentaje de respuestas 5xx
+100 * sum(rate(profelink_http_server_requests_total{http_response_status_code=~"5.."}[5m]))
+  / clamp_min(sum(rate(profelink_http_server_requests_total[5m])), 1)
+
+# Latencia media por endpoint
+sum by (http_route) (rate(profelink_http_server_request_duration_sum[5m]))
+  / clamp_min(sum by (http_route) (rate(profelink_http_server_request_duration_count[5m])), 1)
+```
+
+Estas son **métricas HTTP**, no trazas. No se habilitó un mecanismo seguro de spans HTTP, por lo que no
+se debe afirmar que Tempo mostrará trazas de estas solicitudes. Las consultas se contrastaron con los
+nombres y etiquetas de un receptor Prometheus local; **no se ejecutaron todavía en un tenant real de
+Grafana Cloud**, por lo que deben confirmarse allí antes de darlas por validadas visualmente.
+
+### Métricas propias del juego
 
 | Instrumento | Tipo/unidad | Atributos y alcance |
 |---|---|---|
@@ -110,14 +181,43 @@ Son métricas de proceso best effort: reinician y pueden perderse al caer entre 
 no son auditoría durable. Comando/cola usan reloj monotónico; deadline.lag usa el reloj autoritativo.
 
 No se etiquetan tokens, email, payloads, elecciones, solución, SQL ni ids/códigos de sala/usuario/socket.
-Se deshabilitan HTTP/Express/PG y FS automáticos en `src/telemetry-privacy.ts` para no exportar rutas,
-cabeceras o SQL sin sanear. No se promete conservar las trazas HTTP/PG automáticas anteriores;
-rehabilitarlas exige redacción verificada. Las métricas de juego siguen disponibles con etiquetas acotadas.
+Se deshabilitan HTTP, Express, NestJS Core, Socket.IO, PG, FS y Undici automáticos en
+`src/telemetry-privacy.ts`. NestJS Core puede exportar `url.full` y Socket.IO puede exportar
+`session:<sessionId>` como sala; por eso se apagan y las métricas HTTP propias son la única medición
+HTTP. El arranque registra el SDK antes de cargar NestJS Core y no importa `@nestjs/common` desde el
+módulo de arranque.
 
-Después de crear tu cuenta/destino, conectar el receptor OTLP compatible y verificar los nombres/unidades
-que Grafana recibe. Preparar vistas de tasa por comando/resultado, accepted frente a replayed,
-recuperaciones/rechazos, p95/p99, retraso de deadlines y conexiones. Nombres Prometheus/buckets dependen
-del exportador; todavía no se afirma validado un panel ni una consulta visual.
+### Variables OTLP
+
+| Variable | Uso |
+|---|---|
+| `OTEL_SERVICE_NAME` | Nombre del servicio; por defecto `profelink-api` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP; el SDK agrega `/v1/metrics` y `/v1/traces` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Cabeceras de autenticación del gateway, por ejemplo `Authorization=Basic ...`; no registrar su valor |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default), `http/json`; `grpc` no está soportado y desactiva telemetría con aviso |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` / `_TRACES_ENDPOINT` | Opcionales; si se usan, incluir la ruta `/v1/...` completa |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` / `_TRACES_PROTOCOL` | Opcionales; permiten elegir `http/protobuf` o `http/json` por señal |
+
+Los valores de header percent-encoded (por ejemplo `Basic%20...`) se decodifican al configurar el
+exportador; el valor resultante tampoco se registra. Los headers nunca se escriben en logs ni se incluyen
+en métricas. Si falta el endpoint, el transporte
+no es compatible o el exportador falla, la API sigue arrancando y no se alteran respuestas, commits ni
+partidas. No se inicializa el SDK dos veces. La configuración se comprobó con un receptor HTTP local:
+recibió `POST /otlp/v1/metrics` con `application/x-protobuf` y el header de prueba, sin mostrar su valor.
+No se verificó todavía una cuenta real de Grafana Cloud.
+
+### Comprobar en Grafana Cloud
+
+1. Configurar `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` y
+   `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` en Railway.
+2. Generar tráfico a `/health`, `/quizzes` y `/sessions`; esperar al menos un intervalo de exportación
+   (15 s) y revisar **Explore → Prometheus**.
+3. Buscar `profelink_http_server_requests_total` y filtrar por `http_route`, `http_request_method` o
+   `http_response_status_code`.
+4. Usar las consultas PromQL anteriores y comprobar que `http_route` contiene `:id`/`:code`, nunca el
+   código real de la sala. Los endpoints sin coincidencia aparecen como `unmatched`.
+5. No se afirma que un dashboard ya esté verificado visualmente; esta guía deja las consultas y nombres
+   listos para crearlo.
 
 ## Demostración local reproducible
 

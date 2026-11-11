@@ -184,8 +184,8 @@ describe('Respuestas, concurrencia y puntuación en PostgreSQL', () => {
     const persist = ctx.repository.persist.bind(ctx.repository);
     jest
       .spyOn(ctx.repository, 'persist')
-      .mockImplementationOnce(async (manager, aggregate) => {
-        await persist(manager, aggregate);
+      .mockImplementationOnce(async (...args) => {
+        await persist(...args);
         throw new Error('rollback after scores');
       });
     await expect(ctx.answers.submit(r.users[0], r.input)).rejects.toThrow(
@@ -207,25 +207,22 @@ describe('Respuestas, concurrencia y puntuación en PostgreSQL', () => {
   it('colisión única se recupera en transacción nueva; otros errores no se disfrazan', async () => {
     const r = await room();
     const observed = jest.spyOn(ctx.telemetry, 'answer');
-    const snapshot: typeof ctx.repository.snapshot =
-      ctx.repository.snapshot.bind(ctx.repository);
-    const locked = jest.spyOn(ctx.repository, 'locked');
+    const insert = ctx.repository.insertAcceptedAnswer.bind(ctx.repository);
+    const locked = jest.spyOn(ctx.repository, 'answerLocked');
     let winner!: Answer;
     // After the in-transaction duplicate check, a writer using an independent
     // pooled connection bypasses the room protocol. The next INSERT really
     // violates PostgreSQL uniqueness and aborts our first transaction.
     jest
-      .spyOn(ctx.repository, 'snapshot')
-      .mockImplementationOnce(snapshot)
-      .mockImplementationOnce(async (manager, session) => {
-        const aggregate = await snapshot(manager, session);
+      .spyOn(ctx.repository, 'insertAcceptedAnswer')
+      .mockImplementationOnce(async (...args) => {
         winner = await ctx.dataSource.getRepository(Answer).save({
           ...r.input,
           participantId: r.participants[0].participant.id,
           answeredAt: ctx.clock.now(),
           score: 0,
         });
-        return aggregate;
+        return insert(...args);
       });
     const receipt = await ctx.answers.submit(r.users[0], r.input);
     expect(receipt).toMatchObject({ id: winner.id, choice: true });
